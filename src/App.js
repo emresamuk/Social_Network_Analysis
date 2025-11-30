@@ -1,9 +1,11 @@
 import { useRef, useState } from "react";
 
+// Components
 import GraphView from "./components/GraphView";
 import NodeInfo from "./components/NodeInfo";
 import Controls from "./components/Controls";
 
+// Algorithms
 import { bfs } from "./algorithms/bfs";
 import { dfs } from "./algorithms/dfs";
 import { dijkstra } from "./algorithms/dijkstra";
@@ -11,8 +13,10 @@ import { astar } from "./algorithms/astar";
 import { connectedComponents } from "./algorithms/connected";
 import { welshPowell } from "./algorithms/welshPowell";
 
+// Utils
 import { saveGraphFile, loadGraphFile } from "./utils/fileManager";
 
+// MUI
 import {
   ThemeProvider,
   createTheme,
@@ -48,13 +52,12 @@ export default function App() {
   });
 
   const [selectedNode, setSelectedNode] = useState(null);
-  const [selectedEdge, setSelectedEdge] = useState(null);
   const [result, setResult] = useState(null);
   const [highlightNodes, setHighlightNodes] = useState([]);
 
   const fgRef = useRef();
 
-  // ---------------- Algoritmalar ----------------
+  // ---------------- ALGORITHMS ----------------
   const runBfs = () => {
     if (!selectedNode) return;
     const order = bfs(graph, selectedNode.id);
@@ -95,26 +98,75 @@ export default function App() {
     setHighlightNodes(Object.keys(output).map(Number));
   };
 
-  // ---------------- JSON yükleme,indirme ----------------
+  // ---------------- NODE / EDGE OPERATIONS ----------------
+  const addNode = () => {
+    const newId =
+      graph.nodes.length > 0
+        ? Math.max(...graph.nodes.map((n) => n.id)) + 1
+        : 1;
+
+    const newNode = {
+      id: newId,
+      aktiflik: Math.random(),
+      etkileşim: Math.floor(Math.random() * 10)
+    };
+
+    setGraph({
+      ...graph,
+      nodes: [...graph.nodes, newNode]
+    });
+  };
+
+  const deleteNode = () => {
+    if (!selectedNode) return;
+
+    const newNodes = graph.nodes.filter((n) => n.id !== selectedNode.id);
+
+    const newLinks = graph.links.filter((l) => {
+      const s = l.source.id ?? l.source;
+      const t = l.target.id ?? l.target;
+      return s !== selectedNode.id && t !== selectedNode.id;
+    });
+
+    setGraph({ nodes: newNodes, links: newLinks });
+    setSelectedNode(null);
+    setHighlightNodes([]);
+  };
+
+  const addLink = () => {
+    if (!selectedNode) return;
+    const others = graph.nodes.filter((n) => n.id !== selectedNode.id);
+
+    if (others.length === 0) return;
+
+    const randomNode = others[Math.floor(Math.random() * others.length)];
+
+    const newLink = {
+      source: selectedNode.id,
+      target: randomNode.id,
+      weight: 1
+    };
+
+    setGraph({ ...graph, links: [...graph.links, newLink] });
+  };
+
+  // ---------------- JSON LOAD / SAVE ----------------
   const saveGraph = () => saveGraphFile(graph);
 
   const loadGraph = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    loadGraphFile(file, (json) => {
-      setGraph(json);
-      setSelectedNode(null);
-      setSelectedEdge(null);
-      setHighlightNodes([]);
-      setResult(null);
-    });
+    loadGraphFile(file, setGraph);
+    setSelectedNode(null);
+    setHighlightNodes([]);
+    setResult(null);
   };
 
-  const zoomIn = () => fgRef.current?.zoom(fgRef.current.zoom() * 1.2, 400);
-  const zoomOut = () => fgRef.current?.zoom(fgRef.current.zoom() / 1.2, 400);
-  const zoomToFit = () => fgRef.current?.zoomToFit(400, 40);
-  const centerGraph = () => fgRef.current?.centerAt(0, 0, 400);
+  // ---------------- ZOOM CONTROLS ----------------
+  const zoomIn = () => fgRef.current?.zoom(fgRef.current.zoom() * 1.2, 300);
+  const zoomOut = () => fgRef.current?.zoom(fgRef.current.zoom() / 1.2, 300);
+  const zoomToFit = () => fgRef.current?.zoomToFit(400, 50);
+  const centerGraph = () => fgRef.current?.centerAt(0, 0, 300);
 
   return (
     <ThemeProvider theme={theme}>
@@ -126,49 +178,27 @@ export default function App() {
         </Toolbar>
       </AppBar>
 
-      <Box
-        display="flex"
-        height="calc(100vh - 64px)"
-        width="100vw"
-        overflow="hidden"
-      >
-        {/* Sol graph */}
-        <Box flex="1" bgcolor="#f5f5f5" borderRight="1px solid #ddd">
+      {/* MAIN LAYOUT */}
+      <Box display="flex" height="calc(100vh - 64px)" overflow="hidden">
+
+        {/* LEFT — GRAPH */}
+        <Box flex={1} bgcolor="#f5f5f5" borderRight="1px solid #ddd">
           <GraphView
             graph={graph}
+            onNodeClick={setSelectedNode}
             highlight={highlightNodes}
-            selectedEdge={selectedEdge}
             graphRef={fgRef}
-            onNodeClick={(node) => {
-              setSelectedNode(node);
-              setSelectedEdge(null);
-            }}
-            onLinkClick={(edge) => {
-              setSelectedEdge(edge);
-              setSelectedNode(null);
-            }}
           />
         </Box>
 
-        {/* Sağ panel */}
-        <Box
-          width="380px"
-          bgcolor="#ffffff"
-          p={2}
-          display="flex"
-          flexDirection="column"
-          overflow="hidden"
-        >
-          {/* Node bilgileri */}
+        {/* RIGHT PANEL */}
+        <Box width="360px" bgcolor="#fff" p={2} display="flex" flexDirection="column">
+          
           <Paper sx={{ p: 2, mb: 2 }} elevation={3}>
-            <NodeInfo node={selectedNode} edge={selectedEdge} />
+            <NodeInfo node={selectedNode} />
           </Paper>
 
-          {/* Kontroller */}
-          <Paper
-            sx={{ p: 2, mb: 2, maxHeight: "260px", overflow: "auto" }}
-            elevation={3}
-          >
+          <Paper sx={{ p: 2, mb: 2, flexShrink: 0, overflow: "auto", maxHeight: "260px" }} elevation={3}>
             <Controls
               runBfs={runBfs}
               runDfs={runDfs}
@@ -176,6 +206,9 @@ export default function App() {
               runAstar={runAstar}
               runConnected={runConnected}
               runColoring={runColoring}
+              addNode={addNode}
+              deleteNode={deleteNode}
+              addLink={addLink}
               saveGraph={saveGraph}
               loadGraph={loadGraph}
               zoomIn={zoomIn}
@@ -184,7 +217,8 @@ export default function App() {
               centerGraph={centerGraph}
             />
           </Paper>
-          {/* Sonuç gösterilmesi */}
+
+          {/* RESULT */}
           <Paper
             sx={{
               p: 2,
@@ -193,21 +227,22 @@ export default function App() {
               bgcolor: "#1e1e1e",
               color: "#00e676",
               fontFamily: "monospace",
-              fontSize: "13px"
+              fontSize: "13px",
+              whiteSpace: "pre-wrap"
             }}
             elevation={4}
           >
             {result ? (
               <>
-                <Typography variant="h6" sx={{ color: "#4fc3f7" }}>
+                <Typography variant="h6" sx={{ color: "#4fc3f7", mb: 1 }}>
                   {result.title}
                 </Typography>
-                <Divider sx={{ mb: 1 }} />
+                <Divider sx={{ mb: 1, borderColor: "#555" }} />
                 {JSON.stringify(result.data, null, 2)}
               </>
             ) : (
               <Typography color="gray">
-                Bir algoritma çalıştırıldığında sonuç burada görünecek.
+                Bir algoritma çalıştırıldığında sonuç burada gözükecek.
               </Typography>
             )}
           </Paper>
