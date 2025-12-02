@@ -19,6 +19,7 @@ export default function Controls({
   addNode,
   deleteNode,
   addLink,
+  deleteLink,
   saveGraph,
   loadGraph,
   zoomIn,
@@ -28,6 +29,7 @@ export default function Controls({
 }) {
   return (
     <Stack spacing={2}>
+
       {/* Algoritmalar */}
       <Accordion defaultExpanded>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -71,8 +73,9 @@ export default function Controls({
         <AccordionDetails>
           <Grid container spacing={1}>
             <Grid item xs={6}><Button fullWidth variant="outlined" onClick={addNode}>Düğüm Ekle</Button></Grid>
-            <Grid item xs={6}><Button fullWidth variant="outlined" color="error" onClick={deleteNode}>Sil</Button></Grid>
+            <Grid item xs={6}><Button fullWidth variant="outlined" color="error" onClick={deleteNode}>Düğüm Sil</Button></Grid>
             <Grid item xs={12}><Button fullWidth variant="outlined" onClick={addLink}>Bağ Ekle</Button></Grid>
+            <Grid item xs={12}><Button fullWidth variant="outlined" color="error" onClick={deleteLink}>Bağ Sil</Button></Grid>
           </Grid>
         </AccordionDetails>
       </Accordion>
@@ -98,6 +101,7 @@ export default function Controls({
           </Grid>
         </AccordionDetails>
       </Accordion>
+
     </Stack>
   );
 }
