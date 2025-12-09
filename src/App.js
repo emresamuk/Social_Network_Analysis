@@ -13,6 +13,10 @@ import { welshPowell } from "./algorithms/welshPowell";
 
 import { saveGraphFile, loadGraphFile } from "./utils/fileManager";
 
+import FloydWarshallPanel from "./components/FloydWarshallPanel";
+import { floydWarshall, getFwPath } from "./services/graphAlgorithms";
+
+
 import {
   ThemeProvider,
   createTheme,
@@ -52,9 +56,12 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [highlightNodes, setHighlightNodes] = useState([]);
 
+  const [fwResult, setFwResult] = useState(null);
+  const [fwPath, setFwPath] = useState([]);
+
   const fgRef = useRef();
 
-  // Algoritmalar
+  
 
   const runBfs = () => {
     if (!selectedNode) return;
@@ -95,8 +102,16 @@ export default function App() {
     setResult({ title: "Renkleme", data: output });
     setHighlightNodes(Object.keys(output).map(Number));
   };
+  function runFloydWarshall(start, end) {
+  const result = floydWarshall(graph);
+  setFwResult(result);
 
-  //Node / Edge
+  const path = getFwPath(result.next, start, end) || [];
+  setFwPath(path);
+  setHighlightNodes(path);
+}
+
+  
 
   const addNode = () => {
     const newId =
@@ -164,7 +179,7 @@ export default function App() {
 };
 
 
-  // --- Json yükleme veya indirme ---
+  
 
   const saveGraph = () => saveGraphFile(graph);
 
@@ -181,7 +196,7 @@ export default function App() {
     });
   };
 
-  // yakınlaştırma uzaklaştırma
+  
 
   const zoomIn = () =>
     fgRef.current?.zoom(fgRef.current.zoom() * 1.2, 400);
@@ -209,7 +224,7 @@ export default function App() {
         width="100%"
         overflow="hidden"
       >
-        {/* Soldaki Graphın oldugu yer */}
+        
         <Box
           flex="1"
           position="relative"
@@ -233,7 +248,7 @@ export default function App() {
           />
         </Box>
 
-        {/* Sağ kontrol panelinin yeri */}
+        
         <Box
           width="380px"
           minWidth="380px"
@@ -245,12 +260,12 @@ export default function App() {
           overflow="hidden"
           boxShadow="0 0 4px rgba(0,0,0,0.2)"
         >
-          {/* Bilgi */}
+          
           <Paper sx={{ p: 2, mb: 2 }} elevation={3}>
             <NodeInfo node={selectedNode} edge={selectedEdge} />
           </Paper>
 
-          {/* Kontroller */}
+         
           <Paper
             sx={{ p: 2, mb: 2, maxHeight: "260px", overflow: "auto" }}
             elevation={3}
@@ -274,6 +289,13 @@ export default function App() {
               centerGraph={centerGraph}
             />
           </Paper>
+          <Paper sx={{ p: 2, mb: 2 }} elevation={3}>
+          <FloydWarshallPanel 
+          onRun={runFloydWarshall} 
+            nodes={graph.nodes} 
+         />
+        </Paper>
+
 
           {/* Sonuç */}
           <Paper

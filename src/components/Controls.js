@@ -44,6 +44,12 @@ export default function Controls({
             <Grid item xs={6}><Button variant="contained" fullWidth onClick={runAstar}>A*</Button></Grid>
             <Grid item xs={6}><Button variant="contained" fullWidth onClick={runConnected}>Komponent</Button></Grid>
             <Grid item xs={6}><Button variant="contained" fullWidth onClick={runColoring}>Renkleme</Button></Grid>
+            <Grid item xs={12}>
+            <Button fullWidth variant="contained" onClick={runFloydWarshall}>
+           Floyd-Warshall
+           </Button>
+           </Grid>
+
           </Grid>
         </AccordionDetails>
       </Accordion>
