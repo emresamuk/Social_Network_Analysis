@@ -45,6 +45,14 @@ export default function GraphView({
           ctx.textAlign = "center";
           ctx.fillText(node.id, node.x, node.y - 10);
         }}
+       onNodeDoubleClick={(node) => {
+          const newName = prompt("Yeni isim:", node.id);
+          if (!newName) return;
+
+  
+          renameNode(node.id, newName);
+        }}
+
       />
     </div>
   );

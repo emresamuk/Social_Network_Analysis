@@ -25,12 +25,13 @@ export default function Controls({
   zoomIn,
   zoomOut,
   zoomToFit,
-  centerGraph
+  centerGraph,
+  runFloydWarshall
 }) {
   return (
     <Stack spacing={2}>
 
-      {/* Algoritmalar */}
+      
       <Accordion defaultExpanded>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography>Algoritmalar</Typography>
@@ -54,7 +55,7 @@ export default function Controls({
         </AccordionDetails>
       </Accordion>
 
-      {/* Graf Kontrolleri */}
+      
       <Accordion defaultExpanded>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography>Graf Kontrolleri</Typography>
@@ -70,7 +71,7 @@ export default function Controls({
         </AccordionDetails>
       </Accordion>
 
-      {/* Düğüm İşlemleri */}
+      
       <Accordion defaultExpanded>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography>Düğüm İşlemleri</Typography>
@@ -86,7 +87,7 @@ export default function Controls({
         </AccordionDetails>
       </Accordion>
 
-      {/* JSON İşlemleri */}
+      
       <Accordion defaultExpanded>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography>Veri İşlemleri</Typography>
@@ -107,6 +108,33 @@ export default function Controls({
           </Grid>
         </AccordionDetails>
       </Accordion>
+    <Accordion defaultExpanded>
+  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+    <Typography>Gelişmiş İşlemler</Typography>
+  </AccordionSummary>
+
+  <AccordionDetails>
+    <Grid container spacing={1}>
+      <Grid item xs={6}>
+        <Button fullWidth variant="outlined" onClick={undo}>Geri Al</Button>
+      </Grid>
+      <Grid item xs={6}>
+        <Button fullWidth variant="outlined" onClick={redo}>İleri Al</Button>
+      </Grid>
+
+      <Grid item xs={12}>
+        <Typography variant="body2">Animasyon Hızı</Typography>
+        <input type="range" min="50" max="2000" onChange={setSpeed} />
+      </Grid>
+
+      <Grid item xs={12}>
+        <Button fullWidth variant="outlined" onClick={exportPNG}>
+          PNG İndir
+        </Button>
+      </Grid>
+    </Grid>
+  </AccordionDetails>
+</Accordion>
 
     </Stack>
   );

@@ -16,6 +16,7 @@ import { saveGraphFile, loadGraphFile } from "./utils/fileManager";
 import FloydWarshallPanel from "./components/FloydWarshallPanel";
 import { floydWarshall, getFwPath } from "./services/graphAlgorithms";
 
+import RightPanelEdgeEdit from "./components/RightPanelEdgeEdit"; 
 
 import {
   ThemeProvider,
@@ -110,6 +111,69 @@ export default function App() {
   setFwPath(path);
   setHighlightNodes(path);
 }
+  const [history, setHistory] = useState([]);
+const [future, setFuture] = useState([]);
+
+function pushHistory(newGraph) {
+  setHistory(prev => [...prev, JSON.stringify(newGraph)]);
+}
+
+function undo() {
+  if (history.length === 0) return;
+
+  setFuture(f => [...f, JSON.stringify(graph)]);
+  const prev = JSON.parse(history[history.length - 1]);
+  setHistory(h => h.slice(0, -1));
+  setGraph(prev);
+}
+
+function redo() {
+  if (future.length === 0) return;
+
+  setHistory(h => [...h, JSON.stringify(graph)]);
+  const next = JSON.parse(future[future.length - 1]);
+  setFuture(f => f.slice(0, -1));
+  setGraph(next);
+}
+function renameNode(oldId, newId) {
+  pushHistory(graph);
+
+  const newNodes = graph.nodes.map(n =>
+    n.id === oldId ? { ...n, id: newId } : n
+  );
+
+  const newLinks = graph.links.map(l => ({
+    ...l,
+    source: l.source.id ?? l.source === oldId ? newId : l.source,
+    target: l.target.id ?? l.target === oldId ? newId : l.target
+  }));
+
+  setGraph({ nodes: newNodes, links: newLinks });
+}
+function updateEdgeWeight(linkId, weight) {
+  pushHistory(graph);
+
+  const links = graph.links.map(l =>
+    l.id === linkId ? { ...l, weight: Number(weight) } : l
+  );
+
+  setGraph({ ...graph, links });
+}
+function exportPNG() {
+  const canvas = graphRef.current?.renderer()?.domElement;
+  if (!canvas) return;
+
+  const url = canvas.toDataURL("image/png");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "graph.png";
+  a.click();
+}
+const [speed, setSpeed] = useState(300);
+
+function setSpeedValue(e) {
+  setSpeed(Number(e.target.value));
+}
 
   
 
@@ -153,9 +217,10 @@ export default function App() {
     const random = others[Math.floor(Math.random() * others.length)];
 
     const newLink = {
-      source: selectedNode.id,
-      target: random.id,
-      weight: 1,
+    id: `link-${Date.now()}`, 
+    source: selectedNode.id,
+    target: random.id,
+    weight: 1,
     };
 
     setGraph({ ...graph, links: [...graph.links, newLink] });
@@ -245,6 +310,7 @@ export default function App() {
               setSelectedEdge(edge);
               setSelectedNode(null);
             }}
+            renameNode={renameNode}
           />
         </Box>
 
@@ -264,6 +330,14 @@ export default function App() {
           <Paper sx={{ p: 2, mb: 2 }} elevation={3}>
             <NodeInfo node={selectedNode} edge={selectedEdge} />
           </Paper>
+          {selectedEdge && (
+         <Paper sx={{ p: 2, mb: 2 }} elevation={3}>
+         <RightPanelEdgeEdit 
+         selectedEdge={selectedEdge} 
+        updateWeight={updateEdgeWeight} 
+        />
+        </Paper>
+        )}
 
          
           <Paper
