@@ -26,7 +26,11 @@ export default function Controls({
   zoomOut,
   zoomToFit,
   centerGraph,
-  runFloydWarshall
+  runFloydWarshall,
+  undo,
+  redo,
+  exportPNG,
+  setSpeed
 }) {
   return (
     <Stack spacing={2}>

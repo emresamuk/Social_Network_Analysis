@@ -6,7 +6,8 @@ export default function GraphView({
   selectedEdge,
   graphRef,
   onNodeClick,
-  onLinkClick
+  onLinkClick,
+  renameNode
 }) {
   const highlightSet = new Set(highlight);
 

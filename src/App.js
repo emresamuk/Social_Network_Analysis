@@ -160,7 +160,7 @@ function updateEdgeWeight(linkId, weight) {
   setGraph({ ...graph, links });
 }
 function exportPNG() {
-  const canvas = graphRef.current?.renderer()?.domElement;
+  const canvas = fgRef.current?.renderer()?.domElement;
   if (!canvas) return;
 
   const url = canvas.toDataURL("image/png");
