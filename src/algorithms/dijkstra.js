@@ -1,57 +1,46 @@
 // Başlangıç düğümünden tüm düğümlere en kısa mesafeleri döner: {1: 0, 2: 1, 3: 2, ...}
 
-function getId(n) {
-  return n.id ?? n;
-}
-
 export function dijkstra(graph, startId) {
-  const adj = buildAdjacency(graph);
-  const dist = {};
+  const distances = {};
   const visited = new Set();
 
-  graph.nodes.forEach((n) => {
-    dist[n.id] = Infinity;
-  });
-  dist[startId] = 0;
+  // Başlangıçta tüm mesafeler sonsuz
+  graph.nodes.forEach((n) => (distances[n.id] = Infinity));
+  distances[startId] = 0;
 
   while (true) {
-    let u = null;
-    let best = Infinity;
-    for (const id in dist) {
-      if (!visited.has(Number(id)) && dist[id] < best) {
-        best = dist[id];
-        u = Number(id);
+    let closestNode = null;
+    let shortestDist = Infinity;
+
+    // Ziyaret edilmemiş ve en küçük mesafeye sahip düğümü bul
+    for (const nodeId in distances) {
+      const dist = distances[nodeId];
+      if (!visited.has(parseInt(nodeId)) && dist < shortestDist) {
+        closestNode = parseInt(nodeId);
+        shortestDist = dist;
       }
     }
-    if (u === null) break;
 
-    visited.add(u);
+    // Erişilebilir düğüm kalmadıysa bitir
+    if (closestNode === null || shortestDist === Infinity) break;
 
-    for (const { to, w } of adj[u] || []) {
-      if (dist[u] + w < dist[to]) {
-        dist[to] = dist[u] + w;
+    visited.add(closestNode);
+
+    // Komşuları güncelle
+    const neighbors = graph.getNeighbors(closestNode);
+    
+    neighbors.forEach((neighborObj) => {
+      const neighborId = neighborObj.node.id;
+      
+      const weight = neighborObj.weight; 
+      
+      const newDist = shortestDist + weight;
+
+      if (newDist < distances[neighborId]) {
+        distances[neighborId] = newDist;
       }
-    }
+    });
   }
 
-  return dist;
-}
-
-function buildAdjacency(graph) {
-  const adj = {};
-  graph.nodes.forEach((n) => {
-    adj[n.id] = [];
-  });
-
-  graph.links.forEach((l) => {
-    const s = getId(l.source);
-    const t = getId(l.target);
-    const w = l.weight ?? 1;
-    if (!adj[s]) adj[s] = [];
-    if (!adj[t]) adj[t] = [];
-    adj[s].push({ to: t, w });
-    adj[t].push({ to: s, w });
-  });
-
-  return adj;
+  return distances;
 }

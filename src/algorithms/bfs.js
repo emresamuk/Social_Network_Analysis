@@ -1,46 +1,27 @@
 // Başlangıç düğümünden BFS sırasını döner: [1, 2, 3, ...]
 
-function getId(n) {
-  return n.id ?? n;
-}
-
 export function bfs(graph, startId) {
-  const adj = buildAdjacency(graph);
-  const visited = new Set();
   const queue = [startId];
-  const order = [];
+  const visited = new Set();
+  const result = [];
 
   visited.add(startId);
 
   while (queue.length > 0) {
-    const node = queue.shift();
-    order.push(node);
+    const currentId = queue.shift();
+    result.push(currentId);
 
-    for (const nei of adj[node] || []) {
-      if (!visited.has(nei)) {
-        visited.add(nei);
-        queue.push(nei);
+    // Graph sınıfından komşuları al
+    const neighbors = graph.getNeighbors(currentId);
+
+    neighbors.forEach((neighborObj) => {
+      const neighborId = neighborObj.node.id;
+      if (!visited.has(neighborId)) {
+        visited.add(neighborId);
+        queue.push(neighborId);
       }
-    }
+    });
   }
 
-  return order;
-}
-
-function buildAdjacency(graph) {
-  const adj = {};
-  graph.nodes.forEach((n) => {
-    adj[n.id] = [];
-  });
-
-  graph.links.forEach((l) => {
-    const s = getId(l.source);
-    const t = getId(l.target);
-    if (!adj[s]) adj[s] = [];
-    if (!adj[t]) adj[t] = [];
-    adj[s].push(t);
-    adj[t].push(s); // yönsüz
-  });
-
-  return adj;
+  return result; // Ziyaret sırasına göre düğüm ID'leri
 }

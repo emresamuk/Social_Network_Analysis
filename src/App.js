@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import GraphView from "./components/GraphView";
 import NodeInfo from "./components/NodeInfo";
 import Controls from "./components/Controls";
-
+import { Graph } from "./GraphModel"; 
 import { bfs } from "./algorithms/bfs";
 import { dfs } from "./algorithms/dfs";
 import { dijkstra } from "./algorithms/dijkstra";
@@ -13,37 +13,80 @@ import { welshPowell } from "./algorithms/welshPowell";
 
 import { saveGraphFile, loadGraphFile } from "./utils/fileManager";
 
-import FloydWarshallPanel from "./components/FloydWarshallPanel";
-import { floydWarshall, getFwPath } from "./services/graphAlgorithms";
-
-import RightPanelEdgeEdit from "./components/RightPanelEdgeEdit"; 
-
 import {
   ThemeProvider,
   createTheme,
   CssBaseline,
-  AppBar,
-  Toolbar,
   Typography,
   Box,
   Paper,
-  Divider,
+  Fade
 } from "@mui/material";
 
-const theme = createTheme({
+//TEMA AYARLARI
+const modernTheme = createTheme({
   palette: {
-    mode: "light",
-    primary: { main: "#1976d2" },
-    secondary: { main: "#ff5252" },
+    mode: "dark",
+    primary: {
+      main: "#00e5ff",
+      contrastText: "#000",
+    },
+    secondary: {
+      main: "#d500f9",
+    },
+    background: {
+      default: "#0a0e17",
+      paper: "rgba(22, 27, 34, 0.7)",
+    },
+    text: {
+      primary: "#e0e0e0",
+      secondary: "#9e9e9e",
+    },
+  },
+  typography: {
+    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    h6: {
+      fontWeight: 600,
+      letterSpacing: "0.5px",
+    },
+  },
+  shape: {
+    borderRadius: 16,
+  },
+  components: {
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(255, 255, 255, 0.08)",
+          boxShadow: "0 8px 32px 0 rgba(0, 0, 0, 0.37)",
+        },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: "none",
+          fontWeight: 600,
+          borderRadius: 8,
+        },
+      },
+    },
   },
 });
+
+// Renk Paleti (Welsh-Powell için)
+const COLOR_PALETTE = [
+  "#FF5733", "#33FF57", "#3357FF", "#F033FF", "#FF33A8", 
+  "#33FFF5", "#F5FF33", "#FF8C33", "#8C33FF", "#33FF8C"
+];
 
 export default function App() {
   const [graph, setGraph] = useState({
     nodes: [
-      { id: 1, aktiflik: 0.8, etkileşim: 10 },
-      { id: 2, aktiflik: 0.5, etkileşim: 7 },
-      { id: 3, aktiflik: 0.6, etkileşim: 5 },
+      { id: 1, aktiflik: 0.8, etkileşim: 10, bagSayisi: 2 },
+      { id: 2, aktiflik: 0.5, etkileşim: 7, bagSayisi: 1 },
+      { id: 3, aktiflik: 0.6, etkileşim: 5, bagSayisi: 3 },
     ],
     links: [
       { source: 1, target: 2, weight: 1 },
@@ -53,130 +96,102 @@ export default function App() {
   });
 
   const [selectedNode, setSelectedNode] = useState(null);
-  const [selectedEdge, setSelectedEdge] = useState(null);
   const [result, setResult] = useState(null);
   const [highlightNodes, setHighlightNodes] = useState([]);
-
-  const [fwResult, setFwResult] = useState(null);
-  const [fwPath, setFwPath] = useState([]);
+  
+  // Welsh-Powell renk haritası { 1: "#FF0000", 2: "#00FF00" }
+  const [nodeColors, setNodeColors] = useState({}); 
 
   const fgRef = useRef();
 
-  
+  const clearVisuals = () => {
+    setHighlightNodes([]);
+    setNodeColors({});
+  };
 
+  //ALGORITMALAR
+  
   const runBfs = () => {
-    if (!selectedNode) return;
-    const order = bfs(graph, selectedNode.id);
-    setResult({ title: "BFS", data: order });
+    if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
+    clearVisuals();
+
+    // 1. Düz veriyi Graph sınıfına çevir
+    const graphInstance = Graph.fromJSON(graph);
+    
+    // 2. Algoritmayı çalıştır
+    const order = bfs(graphInstance, selectedNode.id);
+    
+    setResult({ title: "BFS (Breadth-First Search)", data: order });
     setHighlightNodes(order);
   };
 
   const runDfs = () => {
-    if (!selectedNode) return;
-    const order = dfs(graph, selectedNode.id);
-    setResult({ title: "DFS", data: order });
+    if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
+    clearVisuals();
+
+    const graphInstance = Graph.fromJSON(graph);
+    const order = dfs(graphInstance, selectedNode.id);
+
+    setResult({ title: "DFS (Depth-First Search)", data: order });
     setHighlightNodes(order);
   };
 
   const runDijkstra = () => {
-    if (!selectedNode) return;
-    const dist = dijkstra(graph, selectedNode.id);
-    setResult({ title: "Dijkstra", data: dist });
+    if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
+    clearVisuals();
+
+    const graphInstance = Graph.fromJSON(graph);
+    
+    const dist = dijkstra(graphInstance, selectedNode.id);
+    
+    setResult({ title: "Dijkstra (En Kısa Yol)", data: dist });
+    // Erişilebilen tüm düğümleri highlight yap
     setHighlightNodes(Object.keys(dist).map(Number));
   };
 
   const runAstar = () => {
-    if (!selectedNode) return;
-    const path = astar(graph, selectedNode.id, 3);
-    setResult({ title: "A*", data: path });
+    if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
+    const others = graph.nodes.filter(n => n.id !== selectedNode.id);
+    if (others.length === 0) return alert("Grafikte başka düğüm yok!");
+    const targetNode = others[others.length - 1];
+
+    clearVisuals();
+    const graphInstance = Graph.fromJSON(graph);
+    
+    const path = astar(graphInstance, selectedNode.id, targetNode.id);
+    
+    setResult({ 
+      title: `A* Algoritması (${selectedNode.id} -> ${targetNode.id})`, 
+      data: path || "Yol bulunamadı" 
+    });
     setHighlightNodes(path || []);
   };
 
   const runConnected = () => {
-    const output = connectedComponents(graph);
-    setResult({ title: "Bağlı Komponentler", data: output });
-    setHighlightNodes([]);
+    clearVisuals();
+    const graphInstance = Graph.fromJSON(graph);
+    
+    const output = connectedComponents(graphInstance);
+    setResult({ title: "Bağlı Bileşenler (Connected Components)", data: output });
   };
 
   const runColoring = () => {
-    const output = welshPowell(graph);
-    setResult({ title: "Renkleme", data: output });
-    setHighlightNodes(Object.keys(output).map(Number));
+    clearVisuals();
+    const graphInstance = Graph.fromJSON(graph);
+    
+    const rawColors = welshPowell(graphInstance);
+    
+    const visualColors = {};
+    Object.keys(rawColors).forEach(nodeId => {
+      const colorIndex = rawColors[nodeId];
+      visualColors[nodeId] = COLOR_PALETTE[(colorIndex - 1) % COLOR_PALETTE.length];
+    });
+
+    setNodeColors(visualColors);
+    setResult({ title: "Welsh-Powell Renklendirme", data: rawColors });
   };
-  function runFloydWarshall(start, end) {
-  const result = floydWarshall(graph);
-  setFwResult(result);
 
-  const path = getFwPath(result.next, start, end) || [];
-  setFwPath(path);
-  setHighlightNodes(path);
-}
-  const [history, setHistory] = useState([]);
-const [future, setFuture] = useState([]);
-
-function pushHistory(newGraph) {
-  setHistory(prev => [...prev, JSON.stringify(newGraph)]);
-}
-
-function undo() {
-  if (history.length === 0) return;
-
-  setFuture(f => [...f, JSON.stringify(graph)]);
-  const prev = JSON.parse(history[history.length - 1]);
-  setHistory(h => h.slice(0, -1));
-  setGraph(prev);
-}
-
-function redo() {
-  if (future.length === 0) return;
-
-  setHistory(h => [...h, JSON.stringify(graph)]);
-  const next = JSON.parse(future[future.length - 1]);
-  setFuture(f => f.slice(0, -1));
-  setGraph(next);
-}
-function renameNode(oldId, newId) {
-  pushHistory(graph);
-
-  const newNodes = graph.nodes.map(n =>
-    n.id === oldId ? { ...n, id: newId } : n
-  );
-
-  const newLinks = graph.links.map(l => ({
-    ...l,
-    source: l.source.id ?? l.source === oldId ? newId : l.source,
-    target: l.target.id ?? l.target === oldId ? newId : l.target
-  }));
-
-  setGraph({ nodes: newNodes, links: newLinks });
-}
-function updateEdgeWeight(linkId, weight) {
-  pushHistory(graph);
-
-  const links = graph.links.map(l =>
-    l.id === linkId ? { ...l, weight: Number(weight) } : l
-  );
-
-  setGraph({ ...graph, links });
-}
-function exportPNG() {
-  const canvas = fgRef.current?.renderer()?.domElement;
-  if (!canvas) return;
-
-  const url = canvas.toDataURL("image/png");
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "graph.png";
-  a.click();
-}
-const [speed, setSpeed] = useState(300);
-
-function setSpeedValue(e) {
-  setSpeed(Number(e.target.value));
-}
-
-  
-
+  //NODE/EDGE KISMI
   const addNode = () => {
     const newId =
       graph.nodes.length > 0
@@ -185,18 +200,21 @@ function setSpeedValue(e) {
 
     const newNode = {
       id: newId,
-      aktiflik: Math.random(),
-      etkileşim: Math.floor(Math.random() * 10),
+      aktiflik: parseFloat(Math.random().toFixed(2)),
+      etkileşim: Math.floor(Math.random() * 20),
+      bagSayisi: 0, 
     };
 
-    setGraph({ ...graph, nodes: [...graph.nodes, newNode] });
+    setGraph({
+      ...graph,
+      nodes: [...graph.nodes, newNode],
+    });
   };
 
   const deleteNode = () => {
     if (!selectedNode) return;
 
     const newNodes = graph.nodes.filter((n) => n.id !== selectedNode.id);
-
     const newLinks = graph.links.filter((l) => {
       const s = l.source.id ?? l.source;
       const t = l.target.id ?? l.target;
@@ -205,199 +223,226 @@ function setSpeedValue(e) {
 
     setGraph({ nodes: newNodes, links: newLinks });
     setSelectedNode(null);
-    setSelectedEdge(null);
+    clearVisuals();
   };
 
   const addLink = () => {
     if (!selectedNode) return;
-
     const others = graph.nodes.filter((n) => n.id !== selectedNode.id);
-    if (others.length === 0) return;
+    if (others.length === 0) return; 
+    const randomNode = others[Math.floor(Math.random() * others.length)];
 
-    const random = others[Math.floor(Math.random() * others.length)];
+    // Bağlantı zaten var mı kontrol et
+    const exists = graph.links.some(l => {
+        const s = l.source.id ?? l.source;
+        const t = l.target.id ?? l.target;
+        return (s === selectedNode.id && t === randomNode.id) || 
+               (s === randomNode.id && t === selectedNode.id);
+    });
+
+    if (exists) {
+        alert("Bu bağlantı zaten var!");
+        return;
+    }
 
     const newLink = {
-    id: `link-${Date.now()}`, 
-    source: selectedNode.id,
-    target: random.id,
-    weight: 1,
+      source: selectedNode.id,
+      target: randomNode.id,
+      weight: 1, 
     };
 
     setGraph({ ...graph, links: [...graph.links, newLink] });
   };
 
-  const deleteLink = () => {
-  if (!selectedEdge) return;
-
-  const newLinks = graph.links.filter((l) => {
-    const s = l.source.id ?? l.source;
-    const t = l.target.id ?? l.target;
-
-    const ss = selectedEdge.source.id ?? selectedEdge.source;
-    const tt = selectedEdge.target.id ?? selectedEdge.target;
-
-    return !(s === ss && t === tt);
-  });
-
-  setGraph({ ...graph, links: newLinks });
-  setSelectedEdge(null);
-};
-
-
-  
-
+  //JSON LOAD/SAVE
   const saveGraph = () => saveGraphFile(graph);
 
   const loadGraph = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    loadGraphFile(file, (json) => {
-      setGraph(json);
-      setSelectedNode(null);
-      setSelectedEdge(null);
-      setHighlightNodes([]);
-      setResult(null);
+    loadGraphFile(file, (newGraph) => {
+        setGraph(newGraph);
+        setSelectedNode(null);
+        clearVisuals();
+        setResult(null);
     });
   };
 
-  
-
-  const zoomIn = () =>
-    fgRef.current?.zoom(fgRef.current.zoom() * 1.2, 400);
-
-  const zoomOut = () =>
-    fgRef.current?.zoom(fgRef.current.zoom() / 1.2, 400);
-
+  const zoomIn = () => fgRef.current?.zoom(fgRef.current.zoom() * 1.2, 400);
+  const zoomOut = () => fgRef.current?.zoom(fgRef.current.zoom() / 1.2, 400);
   const zoomToFit = () => fgRef.current?.zoomToFit(400, 40);
-
   const centerGraph = () => fgRef.current?.centerAt(0, 0, 400);
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={modernTheme}>
       <CssBaseline />
 
-      <AppBar position="static">
-        <Toolbar>
-          <Typography variant="h6">Sosyal Ağ Analizi</Typography>
-        </Toolbar>
-      </AppBar>
-
       <Box
-        display="flex"
-        height="calc(100vh - 64px)"
-        width="100%"
-        overflow="hidden"
+        sx={{
+          width: "100vw",
+          height: "100vh",
+          overflow: "hidden",
+          position: "relative",
+          bgcolor: "background.default",
+        }}
       >
         
+        {/*GRAFİK GÖRÜNÜMÜ */}
         <Box
-          flex="1"
-          position="relative"
-          bgcolor="#f5f5f5"
-          borderRight="1px solid #ddd"
-          overflow="hidden"
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 1,
+          }}
         >
           <GraphView
             graph={graph}
+            onNodeClick={setSelectedNode}
             highlight={highlightNodes}
-            selectedEdge={selectedEdge}
+            nodeColors={nodeColors} 
             graphRef={fgRef}
-            onNodeClick={(node) => {
-              setSelectedNode(node);
-              setSelectedEdge(null);
-            }}
-            onLinkClick={(edge) => {
-              setSelectedEdge(edge);
-              setSelectedNode(null);
-            }}
-            renameNode={renameNode}
           />
         </Box>
 
-        
-        <Box
-          width="380px"
-          minWidth="380px"
-          maxWidth="380px"
-          bgcolor="#ffffff"
-          p={2}
-          display="flex"
-          flexDirection="column"
-          overflow="hidden"
-          boxShadow="0 0 4px rgba(0,0,0,0.2)"
+        {/*SOL ÜST BAŞLIK */}
+        <Paper
+          elevation={0}
+          sx={{
+            position: "absolute",
+            top: 20,
+            left: 20,
+            zIndex: 10,
+            padding: "12px 24px",
+            borderRadius: "50px",
+            background: "rgba(0, 229, 255, 0.1)",
+            border: "1px solid rgba(0, 229, 255, 0.3)",
+          }}
         >
-          
-          <Paper sx={{ p: 2, mb: 2 }} elevation={3}>
-            <NodeInfo node={selectedNode} edge={selectedEdge} />
-          </Paper>
-          {selectedEdge && (
-         <Paper sx={{ p: 2, mb: 2 }} elevation={3}>
-         <RightPanelEdgeEdit 
-         selectedEdge={selectedEdge} 
-        updateWeight={updateEdgeWeight} 
-        />
-        </Paper>
-        )}
-
-         
-          <Paper
-            sx={{ p: 2, mb: 2, maxHeight: "260px", overflow: "auto" }}
-            elevation={3}
-          >
-            <Controls
-              runBfs={runBfs}
-              runDfs={runDfs}
-              runDijkstra={runDijkstra}
-              runAstar={runAstar}
-              runConnected={runConnected}
-              runColoring={runColoring}
-              addNode={addNode}
-              deleteNode={deleteNode}
-              addLink={addLink}
-              deleteLink={deleteLink}
-              saveGraph={saveGraph}
-              loadGraph={loadGraph}
-              zoomIn={zoomIn}
-              zoomOut={zoomOut}
-              zoomToFit={zoomToFit}
-              centerGraph={centerGraph}
-            />
-          </Paper>
-          <Paper sx={{ p: 2, mb: 2 }} elevation={3}>
-          <FloydWarshallPanel 
-          onRun={runFloydWarshall} 
-            nodes={graph.nodes} 
-         />
+          <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', letterSpacing: 1 }}>
+            SOSYAL AG ANALIZI <span style={{ color: 'white', fontWeight: 300 }}></span>
+          </Typography>
         </Paper>
 
+        {/* SAĞ PANEL */}
+        <Box
+          sx={{
+            position: "absolute",
+            top: 20,
+            right: 20,
+            bottom: 20,
+            width: "360px",
+            zIndex: 10,
+            display: "flex",
+            flexDirection: "column",
+            gap: 2,
+            pointerEvents: "none",
+          }}
+        >
+          {/* Seçili Node Bilgisi */}
+          <Fade in={!!selectedNode} unmountOnExit>
+            <Paper
+              sx={{
+                p: 2,
+                pointerEvents: "auto", 
+                borderLeft: "4px solid #d500f9", 
+              }}
+            >
+              <Typography variant="subtitle2" color="secondary" gutterBottom>
+                SEÇİLİ DÜĞÜM
+              </Typography>
+              <NodeInfo node={selectedNode} />
+            </Paper>
+          </Fade>
 
-          {/* Sonuç */}
+          {/* Ana Kontroller */}
           <Paper
             sx={{
-              p: 2,
+              p: 0,
               flex: 1,
-              overflow: "auto",
-              bgcolor: "#1e1e1e",
-              color: "#00e676",
-              fontFamily: "monospace",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              pointerEvents: "auto",
             }}
-            elevation={4}
           >
-            {result ? (
-              <>
-                <Typography variant="h6" sx={{ color: "#4fc3f7" }}>
-                  {result.title}
-                </Typography>
-                <Divider sx={{ mb: 1 }} />
-                {JSON.stringify(result.data, null, 2)}
-              </>
-            ) : (
-              <Typography color="gray">
-                Bir algoritma çalıştırıldığında sonuç burada görünecek.
+            <Box sx={{ p: 2, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
+               <Typography variant="subtitle1" fontWeight="bold">Kontrol Paneli</Typography>
+            </Box>
+            
+            <Box sx={{ p: 2, overflowY: "auto", flex: 1 }}>
+              <Controls
+                runBfs={runBfs}
+                runDfs={runDfs}
+                runDijkstra={runDijkstra}
+                runAstar={runAstar}
+                runConnected={runConnected}
+                runColoring={runColoring}
+                addNode={addNode}
+                deleteNode={deleteNode}
+                addLink={addLink}
+                saveGraph={saveGraph}
+                loadGraph={loadGraph}
+                zoomIn={zoomIn}
+                zoomOut={zoomOut}
+                zoomToFit={zoomToFit}
+                centerGraph={centerGraph}
+              />
+            </Box>
+          </Paper>
+
+          {/* Sonuç kısmı */}
+          <Paper
+            sx={{
+              height: "200px",
+              display: "flex",
+              flexDirection: "column",
+              bgcolor: "#000000 !important", 
+              border: "1px solid #333",
+              pointerEvents: "auto",
+            }}
+          >
+            <Box sx={{ 
+                px: 2, py: 1, 
+                bgcolor: "#1a1a1a", 
+                borderBottom: "1px solid #333",
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+              <Typography variant="caption" sx={{ fontFamily: "monospace", color: "#aaa" }}>
+                TERMINAL ÇIKTISI
               </Typography>
-            )}
+              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: result ? '#00e676' : '#555' }} />
+            </Box>
+            
+            <Box sx={{ 
+                p: 2, 
+                overflow: "auto", 
+                flex: 1, 
+                fontFamily: "'Fira Code', 'Consolas', monospace",
+                fontSize: "0.85rem"
+              }}>
+              {result ? (
+                <>
+                  <Typography sx={{ color: "#00e5ff", mb: 1, fontWeight: 'bold' }}>
+                    {">"} {result.title}
+                  </Typography>
+                  <Box component="pre" sx={{ m: 0, color: "#a5d6a7" }}>
+                    {JSON.stringify(result.data, null, 2)}
+                  </Box>
+                </>
+              ) : (
+                <Typography sx={{ color: "#555", fontStyle: "italic" }}>
+                  {">"} Bekleniyor... Bir işlem başlatın.
+                </Typography>
+              )}
+            </Box>
           </Paper>
         </Box>
+
       </Box>
     </ThemeProvider>
   );

@@ -1,16 +1,11 @@
-import {
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Typography
-} from "@mui/material";
+import { Accordion, AccordionSummary, AccordionDetails, Typography } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 
-export default function NodeInfo({ node, edge }) {
+export default function NodeInfo({ node }) {
   return (
     <Accordion defaultExpanded>
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Typography variant="h6">Bilgi Paneli</Typography>
+        <Typography variant="h6">Düğüm Bilgisi</Typography>
       </AccordionSummary>
 
       <AccordionDetails>
@@ -19,17 +14,11 @@ export default function NodeInfo({ node, edge }) {
             <Typography>ID: {node.id}</Typography>
             <Typography>Aktiflik: {node.aktiflik}</Typography>
             <Typography>Etkileşim: {node.etkileşim}</Typography>
-          </>
-        ) : edge ? (
-          <>
-            <Typography>Edge Bilgisi</Typography>
-            <Typography>Kaynak: {edge.source.id ?? edge.source}</Typography>
-            <Typography>Hedef: {edge.target.id ?? edge.target}</Typography>
-            <Typography>Ağırlık: {edge.weight}</Typography>
+            <Typography>Bağ Sayısı: {node.bagSayisi}</Typography>
           </>
         ) : (
           <Typography color="text.secondary">
-            Bir düğüme veya bağlantıya tıklayın...
+            Bir düğüme tıklayın...
           </Typography>
         )}
       </AccordionDetails>

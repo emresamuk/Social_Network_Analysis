@@ -1,57 +1,46 @@
 // burada welshPowell ile renklendirme yapacağız
-function getId(n) {
-  return n.id ?? n;
-}
 
 export function welshPowell(graph) {
-  const adj = buildAdjacency(graph);
-
-  // Dereceye göre azalan sırala
-  const nodesSorted = [...graph.nodes].sort((a, b) => {
-    const da = (adj[a.id] || []).length;
-    const db = (adj[b.id] || []).length;
-    return db - da;
+  // 1. Adım: Düğümleri derecelerine (bağlantı sayısı) göre büyükten küçüğe sırala
+  const sortedNodes = [...graph.nodes].sort((a, b) => {
+    const degreeA = graph.getNeighbors(a.id).length;
+    const degreeB = graph.getNeighbors(b.id).length;
+    return degreeB - degreeA;
   });
 
-  const color = {};
-  let currentColor = 0;
+  const colors = {};
+  let colorIndex = 1;
 
-  for (const node of nodesSorted) {
-    const id = node.id;
-    if (color[id] !== undefined) continue;
+  // 2. Adım: Sırayla renklendirme
+  for (let i = 0; i < sortedNodes.length; i++) {
+    const node = sortedNodes[i];
+    
+    // Eğer düğüm zaten boyanmışsa atla
+    if (colors[node.id]) continue;
 
-    color[id] = currentColor;
+    // İlk boş düğüme mevcut rengi ata
+    colors[node.id] = colorIndex;
 
-    for (const other of nodesSorted) {
-      const oid = other.id;
-      if (color[oid] !== undefined) continue;
-      const neighbors = adj[oid] || [];
-      const conflict = neighbors.some((nei) => color[nei] === currentColor);
-      if (!conflict) {
-        color[oid] = currentColor;
+    // Bu renge boyanabilecek diğer (komşu olmayan) düğümleri bul
+    for (let j = i + 1; j < sortedNodes.length; j++) {
+      const potentialNode = sortedNodes[j];
+      
+      if (colors[potentialNode.id]) continue;
+
+      const neighbors = graph.getNeighbors(potentialNode.id);
+      
+      const isAdjacentToCurrentColor = neighbors.some(
+        (n) => colors[n.node.id] === colorIndex
+      );
+
+      if (!isAdjacentToCurrentColor) {
+        colors[potentialNode.id] = colorIndex;
       }
     }
 
-    currentColor++;
+    // Bir sonraki renk grubuna geç
+    colorIndex++;
   }
 
-  return color;
-}
-
-function buildAdjacency(graph) {
-  const adj = {};
-  graph.nodes.forEach((n) => {
-    adj[n.id] = [];
-  });
-
-  graph.links.forEach((l) => {
-    const s = getId(l.source);
-    const t = getId(l.target);
-    if (!adj[s]) adj[s] = [];
-    if (!adj[t]) adj[t] = [];
-    adj[s].push(t);
-    adj[t].push(s);
-  });
-
-  return adj;
+  return colors;
 }
