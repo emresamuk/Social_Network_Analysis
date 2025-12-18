@@ -1,3 +1,4 @@
+
 import { useRef, useState } from "react";
 
 import GraphView from "./components/GraphView";
@@ -75,13 +76,8 @@ const modernTheme = createTheme({
   },
 });
 
-// Renk Paleti (Welsh-Powell için)
-const COLOR_PALETTE = [
-  "#FF5733", "#33FF57", "#3357FF", "#F033FF", "#FF33A8", 
-  "#33FFF5", "#F5FF33", "#FF8C33", "#8C33FF", "#33FF8C"
-];
-
 export default function App() {
+ 
   const [graph, setGraph] = useState({
     nodes: [
       { id: 1, aktiflik: 0.8, etkileşim: 10, bagSayisi: 2 },
@@ -96,31 +92,90 @@ export default function App() {
   });
 
   const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedEdge, setSelectedEdge] = useState(null); 
   const [result, setResult] = useState(null);
   const [highlightNodes, setHighlightNodes] = useState([]);
-  
-  // Welsh-Powell renk haritası { 1: "#FF0000", 2: "#00FF00" }
   const [nodeColors, setNodeColors] = useState({}); 
 
-  const fgRef = useRef();
+ 
+  const [history, setHistory] = useState([]);
+  const [future, setFuture] = useState([]);
+  
+  
+  const [speed, setSpeed] = useState(500);
+
+  const fgRef = useRef(); 
+
+ 
 
   const clearVisuals = () => {
     setHighlightNodes([]);
     setNodeColors({});
   };
 
-  //ALGORITMALAR
+  const pushHistory = (currentGraph) => {
+    setHistory(prev => [...prev, JSON.stringify(currentGraph)]);
+    setFuture([]); 
+  };
+
+  
+
+  const undo = () => {
+    if (history.length === 0) return;
+    const previous = JSON.parse(history[history.length - 1]);
+    
+    setFuture(f => [...f, JSON.stringify(graph)]);
+    setHistory(h => h.slice(0, -1));
+    setGraph(previous);
+    clearVisuals();
+  };
+
+  const redo = () => {
+    if (future.length === 0) return;
+    const next = JSON.parse(future[future.length - 1]);
+
+    setHistory(h => [...h, JSON.stringify(graph)]);
+    setFuture(f => f.slice(0, -1));
+    setGraph(next);
+    clearVisuals();
+  };
+
+  const renameNode = (oldId, newId) => {
+    if (!newId || newId === oldId) return;
+    pushHistory(graph);
+
+    const newNodes = graph.nodes.map(n => n.id === oldId ? { ...n, id: newId } : n);
+    const newLinks = graph.links.map(l => ({
+      ...l,
+      source: (l.source.id ?? l.source) === oldId ? newId : (l.source.id ?? l.source),
+      target: (l.target.id ?? l.target) === oldId ? newId : (l.target.id ?? l.target)
+    }));
+
+    setGraph({ nodes: newNodes, links: newLinks });
+  };
+
+  const exportPNG = () => {
+    const canvas = fgRef.current?.renderer()?.domElement;
+    if (!canvas) return;
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "sosyal_ag_analizi.png";
+    a.click();
+  };
+
+  const updateEdgeWeight = (edgeId, newWeight) => {
+   
+    console.log("Weight update:", edgeId, newWeight);
+  };
+
+  // --- ALGORITMALAR ---
   
   const runBfs = () => {
     if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
     clearVisuals();
-
-    // 1. Düz veriyi Graph sınıfına çevir
     const graphInstance = Graph.fromJSON(graph);
-    
-    // 2. Algoritmayı çalıştır
     const order = bfs(graphInstance, selectedNode.id);
-    
     setResult({ title: "BFS (Breadth-First Search)", data: order });
     setHighlightNodes(order);
   };
@@ -128,10 +183,8 @@ export default function App() {
   const runDfs = () => {
     if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
     clearVisuals();
-
     const graphInstance = Graph.fromJSON(graph);
     const order = dfs(graphInstance, selectedNode.id);
-
     setResult({ title: "DFS (Depth-First Search)", data: order });
     setHighlightNodes(order);
   };
@@ -139,25 +192,20 @@ export default function App() {
   const runDijkstra = () => {
     if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
     clearVisuals();
-
     const graphInstance = Graph.fromJSON(graph);
-    
     const dist = dijkstra(graphInstance, selectedNode.id);
-    
     setResult({ title: "Dijkstra (En Kısa Yol)", data: dist });
-    // Erişilebilen tüm düğümleri highlight yap
-    setHighlightNodes(Object.keys(dist).map(Number));
+    setHighlightNodes(Object.keys(dist).map(Number)); // Basit highlight
   };
 
   const runAstar = () => {
     if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
     const others = graph.nodes.filter(n => n.id !== selectedNode.id);
     if (others.length === 0) return alert("Grafikte başka düğüm yok!");
-    const targetNode = others[others.length - 1];
+    const targetNode = others[others.length - 1]; 
 
     clearVisuals();
     const graphInstance = Graph.fromJSON(graph);
-    
     const path = astar(graphInstance, selectedNode.id, targetNode.id);
     
     setResult({ 
@@ -170,57 +218,88 @@ export default function App() {
   const runConnected = () => {
     clearVisuals();
     const graphInstance = Graph.fromJSON(graph);
-    
     const output = connectedComponents(graphInstance);
     setResult({ title: "Bağlı Bileşenler (Connected Components)", data: output });
   };
 
-  const runColoring = () => {
+  
+ const runColoring = () => {
     clearVisuals();
-    const graphInstance = Graph.fromJSON(graph);
     
-    const rawColors = welshPowell(graphInstance);
+   
+    const output = welshPowell(graph); 
     
-    const visualColors = {};
-    Object.keys(rawColors).forEach(nodeId => {
-      const colorIndex = rawColors[nodeId];
-      visualColors[nodeId] = COLOR_PALETTE[(colorIndex - 1) % COLOR_PALETTE.length];
+    
+    setNodeColors(output.coloring);
+
+    
+    setResult({ 
+      title: "Welsh-Powell Renklendirme Tablosu", 
+      data: output.detailedTables 
+    });
+  };
+const runCentrality = () => {
+    
+    clearVisuals(); 
+    setNodeColors({}); 
+
+   
+    const nodesWithDegree = graph.nodes.map(node => {
+      
+      const degree = graph.links.filter(l => 
+        (l.source.id ?? l.source) === node.id || 
+        (l.target.id ?? l.target) === node.id
+      ).length;
+      return { ...node, degree };
     });
 
-    setNodeColors(visualColors);
-    setResult({ title: "Welsh-Powell Renklendirme", data: rawColors });
+    
+    nodesWithDegree.sort((a, b) => b.degree - a.degree);
+
+    
+    const top5 = nodesWithDegree.slice(0, 5).map(n => ({
+      "Sıra": "#", // Geçici
+      "Kullanıcı ID": n.id,
+      "Derece (Bağlantı)": n.degree,
+      "Etkileşim Puanı": n.etkileşim
+    }));
+
+    
+    const formattedTop5 = top5.map((item, index) => ({ ...item, "Sıra": index + 1 }));
+
+    
+    setResult({ 
+      title: "En Etkili 5 Düğüm (Degree Centrality)", 
+      data: formattedTop5 
+    });
+    
+    
+    const top5Ids = formattedTop5.map(item => item["Kullanıcı ID"]);
+    setHighlightNodes(top5Ids); 
   };
+  
 
-  //NODE/EDGE KISMI
   const addNode = () => {
-    const newId =
-      graph.nodes.length > 0
-        ? Math.max(...graph.nodes.map((n) => n.id)) + 1
-        : 1;
-
+    pushHistory(graph);
+    const newId = graph.nodes.length > 0 ? Math.max(...graph.nodes.map((n) => typeof n.id === 'number' ? n.id : 0)) + 1 : 1;
     const newNode = {
       id: newId,
       aktiflik: parseFloat(Math.random().toFixed(2)),
       etkileşim: Math.floor(Math.random() * 20),
       bagSayisi: 0, 
     };
-
-    setGraph({
-      ...graph,
-      nodes: [...graph.nodes, newNode],
-    });
+    setGraph({ ...graph, nodes: [...graph.nodes, newNode] });
   };
 
   const deleteNode = () => {
     if (!selectedNode) return;
-
+    pushHistory(graph);
     const newNodes = graph.nodes.filter((n) => n.id !== selectedNode.id);
     const newLinks = graph.links.filter((l) => {
       const s = l.source.id ?? l.source;
       const t = l.target.id ?? l.target;
       return s !== selectedNode.id && t !== selectedNode.id;
     });
-
     setGraph({ nodes: newNodes, links: newLinks });
     setSelectedNode(null);
     clearVisuals();
@@ -232,7 +311,6 @@ export default function App() {
     if (others.length === 0) return; 
     const randomNode = others[Math.floor(Math.random() * others.length)];
 
-    // Bağlantı zaten var mı kontrol et
     const exists = graph.links.some(l => {
         const s = l.source.id ?? l.source;
         const t = l.target.id ?? l.target;
@@ -245,17 +323,92 @@ export default function App() {
         return;
     }
 
+    pushHistory(graph);
     const newLink = {
+      id: `link-${Date.now()}`,
       source: selectedNode.id,
       target: randomNode.id,
       weight: 1, 
     };
-
     setGraph({ ...graph, links: [...graph.links, newLink] });
   };
 
-  //JSON LOAD/SAVE
-  const saveGraph = () => saveGraphFile(graph);
+  
+  const saveGraph = () => {
+    
+    const nodes = graph.nodes;
+    const links = graph.links;
+    
+    
+    const nodeIds = nodes.map(n => n.id);
+    
+    
+    const adjacencyList = {};
+    nodes.forEach(node => {
+      
+      const neighbors = links
+        .filter(l => {
+          const s = l.source.id ?? l.source;
+          const t = l.target.id ?? l.target;
+          return s === node.id || t === node.id;
+        })
+        .map(l => {
+          const s = l.source.id ?? l.source;
+          const t = l.target.id ?? l.target;
+        
+          return s === node.id ? t : s;
+        });
+      
+      adjacencyList[node.id] = neighbors;
+    });
+
+    
+    const size = nodes.length;
+    const matrix = Array(size).fill(null).map(() => Array(size).fill(0));
+
+    links.forEach(link => {
+      const s = link.source.id ?? link.source;
+      const t = link.target.id ?? link.target;
+      const w = link.weight ?? 1;
+
+      const sourceIndex = nodeIds.indexOf(s);
+      const targetIndex = nodeIds.indexOf(t);
+
+      if (sourceIndex !== -1 && targetIndex !== -1) {
+        matrix[sourceIndex][targetIndex] = w; 
+        matrix[targetIndex][sourceIndex] = w; 
+      }
+    });
+
+    
+    const exportData = {
+     
+      nodes: nodes.map(n => ({
+        id: n.id,
+        aktiflik: n.aktiflik,
+        etkileşim: n.etkileşim,
+        bagSayisi: n.bagSayisi,
+       
+        x: n.x,
+        y: n.y
+      })),
+      links: links.map(l => ({
+        source: l.source.id ?? l.source,
+        target: l.target.id ?? l.target,
+        weight: l.weight ?? 1,
+        id: l.id
+      })),
+      
+     
+      analiz: {
+        adjacencyList: adjacencyList,
+        adjacencyMatrix: matrix,
+        nodeOrder: nodeIds // Matrisin hangi sıraya göre olduğu
+      }
+    };
+
+    saveGraphFile(exportData);
+  };
 
   const loadGraph = (e) => {
     const file = e.target.files?.[0];
@@ -265,9 +418,14 @@ export default function App() {
         setSelectedNode(null);
         clearVisuals();
         setResult(null);
+        // Geçmişi temizle yeni dosya yüklenince
+        setHistory([]);
+        setFuture([]);
     });
+    e.target.value = ""; 
   };
 
+  
   const zoomIn = () => fgRef.current?.zoom(fgRef.current.zoom() * 1.2, 400);
   const zoomOut = () => fgRef.current?.zoom(fgRef.current.zoom() / 1.2, 400);
   const zoomToFit = () => fgRef.current?.zoomToFit(400, 40);
@@ -287,7 +445,7 @@ export default function App() {
         }}
       >
         
-        {/*GRAFİK GÖRÜNÜMÜ */}
+        
         <Box
           sx={{
             position: "absolute",
@@ -300,14 +458,23 @@ export default function App() {
         >
           <GraphView
             graph={graph}
-            onNodeClick={setSelectedNode}
+            onNodeClick={(node) => {
+                setSelectedNode(node);
+                setSelectedEdge(null);
+            }}
+            onLinkClick={(link) => {
+                setSelectedEdge(link);
+                setSelectedNode(null);
+            }}
             highlight={highlightNodes}
             nodeColors={nodeColors} 
             graphRef={fgRef}
+            renameNode={renameNode} // EKSİK PROP EKLENDİ
+            selectedEdge={selectedEdge}
           />
         </Box>
 
-        {/*SOL ÜST BAŞLIK */}
+        {/* SOL ÜST BAŞLIK */}
         <Paper
           elevation={0}
           sx={{
@@ -322,7 +489,7 @@ export default function App() {
           }}
         >
           <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', letterSpacing: 1 }}>
-            SOSYAL AG ANALIZI <span style={{ color: 'white', fontWeight: 300 }}></span>
+            SOSYAL AG ANALIZI
           </Typography>
         </Paper>
 
@@ -341,15 +508,9 @@ export default function App() {
             pointerEvents: "none",
           }}
         >
-          {/* Seçili Node Bilgisi */}
+          {/* Seçili Düğüm Bilgisi */}
           <Fade in={!!selectedNode} unmountOnExit>
-            <Paper
-              sx={{
-                p: 2,
-                pointerEvents: "auto", 
-                borderLeft: "4px solid #d500f9", 
-              }}
-            >
+            <Paper sx={{ p: 2, pointerEvents: "auto", borderLeft: "4px solid #d500f9" }}>
               <Typography variant="subtitle2" color="secondary" gutterBottom>
                 SEÇİLİ DÜĞÜM
               </Typography>
@@ -380,6 +541,7 @@ export default function App() {
                 runAstar={runAstar}
                 runConnected={runConnected}
                 runColoring={runColoring}
+                runCentrality={runCentrality}
                 addNode={addNode}
                 deleteNode={deleteNode}
                 addLink={addLink}
@@ -389,11 +551,15 @@ export default function App() {
                 zoomOut={zoomOut}
                 zoomToFit={zoomToFit}
                 centerGraph={centerGraph}
+                undo={undo}
+                redo={redo}
+                exportPNG={exportPNG}
+                setSpeed={(e) => setSpeed(Number(e.target.value))}
               />
             </Box>
           </Paper>
 
-          {/* Sonuç kısmı */}
+          
           <Paper
             sx={{
               height: "200px",

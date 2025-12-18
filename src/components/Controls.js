@@ -16,6 +16,7 @@ export default function Controls({
   runAstar,
   runConnected,
   runColoring,
+  runCentrality,
   addNode,
   deleteNode,
   addLink,
@@ -41,6 +42,7 @@ export default function Controls({
             <Grid item xs={6}><Button fullWidth variant="contained" onClick={runAstar}>A*</Button></Grid>
             <Grid item xs={6}><Button fullWidth variant="contained" onClick={runConnected}>Komponent</Button></Grid>
             <Grid item xs={6}><Button fullWidth variant="contained" onClick={runColoring}>Renkleme</Button></Grid>
+            <Grid item xs={6}> <Button fullWidth variant="contained" color="warning" onClick={runCentrality}> En Etkili Düğümler (Analiz)</Button></Grid>
           </Grid>
         </AccordionDetails>
       </Accordion>
