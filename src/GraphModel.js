@@ -62,7 +62,7 @@ export class Graph {
     }
   }
 
-  // Algoritmaların (BFS, DFS, Dijkstra) kullandığı kritik fonksiyon
+  // Algoritmaların kullandığı fonksiyon
   getNeighbors(nodeId) {
     return this.adjList.get(nodeId) || [];
   }

@@ -22,6 +22,8 @@ export default function Controls({
   addLink,
   saveGraph,
   loadGraph,
+  saveCSV, 
+  loadCSV, 
   zoomIn,
   zoomOut,
   zoomToFit,
@@ -42,7 +44,7 @@ export default function Controls({
             <Grid item xs={6}><Button fullWidth variant="contained" onClick={runAstar}>A*</Button></Grid>
             <Grid item xs={6}><Button fullWidth variant="contained" onClick={runConnected}>Komponent</Button></Grid>
             <Grid item xs={6}><Button fullWidth variant="contained" onClick={runColoring}>Renkleme</Button></Grid>
-            <Grid item xs={6}> <Button fullWidth variant="contained" color="warning" onClick={runCentrality}> En Etkili Düğümler (Analiz)</Button></Grid>
+            <Grid item xs={6}> <Button fullWidth variant="contained" onClick={runCentrality}> En Etkili Düğümler</Button></Grid>
           </Grid>
         </AccordionDetails>
       </Accordion>
@@ -70,19 +72,20 @@ export default function Controls({
         <AccordionDetails>
           <Grid container spacing={1}>
             <Grid item xs={6}><Button fullWidth variant="outlined" onClick={addNode}>Düğüm Ekle</Button></Grid>
-            <Grid item xs={6}><Button fullWidth variant="outlined" color="error" onClick={deleteNode}>Sil</Button></Grid>
+            <Grid item xs={6}><Button fullWidth variant="outlined" color="error" onClick={deleteNode}>Düğüm Sil</Button></Grid>
             <Grid item xs={12}><Button fullWidth variant="outlined" onClick={addLink}>Bağ Ekle</Button></Grid>
           </Grid>
         </AccordionDetails>
       </Accordion>
 
-      {/* JSON işlemleri */}
+      {/* Veri İşlemleri (JSON ve CSV) */}
       <Accordion defaultExpanded>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
           <Typography>Veri İşlemleri</Typography>
         </AccordionSummary>
         <AccordionDetails>
           <Grid container spacing={1}>
+
             <Grid item xs={6}>
               <Button fullWidth variant="outlined" onClick={saveGraph}>
                 JSON Kaydet
@@ -90,8 +93,14 @@ export default function Controls({
             </Grid>
             <Grid item xs={6}>
               <Button fullWidth variant="outlined" component="label">
-                Yükle
+                JSON Yükle
                 <input hidden type="file" accept="application/json" onChange={loadGraph} />
+              </Button>
+            </Grid>
+            
+            <Grid item xs={6}>
+              <Button fullWidth variant="outlined" component="label" onClick={saveCSV}>
+                CSV Kaydet
               </Button>
             </Grid>
           </Grid>

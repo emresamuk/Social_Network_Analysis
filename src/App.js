@@ -1,10 +1,9 @@
-
 import { useRef, useState } from "react";
 
 import GraphView from "./components/GraphView";
 import NodeInfo from "./components/NodeInfo";
 import Controls from "./components/Controls";
-import { Graph } from "./GraphModel"; 
+import { Graph } from "./GraphModel";
 import { bfs } from "./algorithms/bfs";
 import { dfs } from "./algorithms/dfs";
 import { dijkstra } from "./algorithms/dijkstra";
@@ -12,7 +11,12 @@ import { astar } from "./algorithms/astar";
 import { connectedComponents } from "./algorithms/connected";
 import { welshPowell } from "./algorithms/welshPowell";
 
-import { saveGraphFile, loadGraphFile } from "./utils/fileManager";
+import {
+  saveGraphFile,
+  loadGraphFile,
+  saveGraphToCSV,
+  loadGraphFromCSV,
+} from "./utils/fileManager";
 
 import {
   ThemeProvider,
@@ -21,10 +25,16 @@ import {
   Typography,
   Box,
   Paper,
-  Fade
+  Fade,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Button,
 } from "@mui/material";
 
-//TEMA AYARLARI
+// TEMA AYARLARI
 const modernTheme = createTheme({
   palette: {
     mode: "dark",
@@ -77,7 +87,6 @@ const modernTheme = createTheme({
 });
 
 export default function App() {
- 
   const [graph, setGraph] = useState({
     nodes: [
       { id: 1, aktiflik: 0.8, etkileşim: 10, bagSayisi: 2 },
@@ -92,21 +101,19 @@ export default function App() {
   });
 
   const [selectedNode, setSelectedNode] = useState(null);
-  const [selectedEdge, setSelectedEdge] = useState(null); 
+  const [selectedEdge, setSelectedEdge] = useState(null);
   const [result, setResult] = useState(null);
   const [highlightNodes, setHighlightNodes] = useState([]);
-  const [nodeColors, setNodeColors] = useState({}); 
+  const [nodeColors, setNodeColors] = useState({});
 
- 
+  // Undo/Redo
   const [history, setHistory] = useState([]);
   const [future, setFuture] = useState([]);
-  
-  
-  const [speed, setSpeed] = useState(500);
 
-  const fgRef = useRef(); 
+  const [openLinkDialog, setOpenLinkDialog] = useState(false);
+  const [targetNodeId, setTargetNodeId] = useState("");
 
- 
+  const fgRef = useRef();
 
   const clearVisuals = () => {
     setHighlightNodes([]);
@@ -114,18 +121,16 @@ export default function App() {
   };
 
   const pushHistory = (currentGraph) => {
-    setHistory(prev => [...prev, JSON.stringify(currentGraph)]);
-    setFuture([]); 
+    setHistory((prev) => [...prev, JSON.stringify(currentGraph)]);
+    setFuture([]);
   };
-
-  
 
   const undo = () => {
     if (history.length === 0) return;
     const previous = JSON.parse(history[history.length - 1]);
-    
-    setFuture(f => [...f, JSON.stringify(graph)]);
-    setHistory(h => h.slice(0, -1));
+
+    setFuture((f) => [...f, JSON.stringify(graph)]);
+    setHistory((h) => h.slice(0, -1));
     setGraph(previous);
     clearVisuals();
   };
@@ -134,8 +139,8 @@ export default function App() {
     if (future.length === 0) return;
     const next = JSON.parse(future[future.length - 1]);
 
-    setHistory(h => [...h, JSON.stringify(graph)]);
-    setFuture(f => f.slice(0, -1));
+    setHistory((h) => [...h, JSON.stringify(graph)]);
+    setFuture((f) => f.slice(0, -1));
     setGraph(next);
     clearVisuals();
   };
@@ -144,11 +149,15 @@ export default function App() {
     if (!newId || newId === oldId) return;
     pushHistory(graph);
 
-    const newNodes = graph.nodes.map(n => n.id === oldId ? { ...n, id: newId } : n);
-    const newLinks = graph.links.map(l => ({
+    const newNodes = graph.nodes.map((n) =>
+      n.id === oldId ? { ...n, id: newId } : n
+    );
+    const newLinks = graph.links.map((l) => ({
       ...l,
-      source: (l.source.id ?? l.source) === oldId ? newId : (l.source.id ?? l.source),
-      target: (l.target.id ?? l.target) === oldId ? newId : (l.target.id ?? l.target)
+      source:
+        (l.source.id ?? l.source) === oldId ? newId : l.source.id ?? l.source,
+      target:
+        (l.target.id ?? l.target) === oldId ? newId : l.target.id ?? l.target,
     }));
 
     setGraph({ nodes: newNodes, links: newLinks });
@@ -164,13 +173,8 @@ export default function App() {
     a.click();
   };
 
-  const updateEdgeWeight = (edgeId, newWeight) => {
-   
-    console.log("Weight update:", edgeId, newWeight);
-  };
-
   // --- ALGORITMALAR ---
-  
+
   const runBfs = () => {
     if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
     clearVisuals();
@@ -195,22 +199,22 @@ export default function App() {
     const graphInstance = Graph.fromJSON(graph);
     const dist = dijkstra(graphInstance, selectedNode.id);
     setResult({ title: "Dijkstra (En Kısa Yol)", data: dist });
-    setHighlightNodes(Object.keys(dist).map(Number)); // Basit highlight
+    setHighlightNodes(Object.keys(dist).map(Number));
   };
 
   const runAstar = () => {
     if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
-    const others = graph.nodes.filter(n => n.id !== selectedNode.id);
+    const others = graph.nodes.filter((n) => n.id !== selectedNode.id);
     if (others.length === 0) return alert("Grafikte başka düğüm yok!");
-    const targetNode = others[others.length - 1]; 
+    const targetNode = others[others.length - 1];
 
     clearVisuals();
     const graphInstance = Graph.fromJSON(graph);
     const path = astar(graphInstance, selectedNode.id, targetNode.id);
-    
-    setResult({ 
-      title: `A* Algoritması (${selectedNode.id} -> ${targetNode.id})`, 
-      data: path || "Yol bulunamadı" 
+
+    setResult({
+      title: `A* Algoritması (${selectedNode.id} -> ${targetNode.id})`,
+      data: path || "Yol bulunamadı",
     });
     setHighlightNodes(path || []);
   };
@@ -219,74 +223,73 @@ export default function App() {
     clearVisuals();
     const graphInstance = Graph.fromJSON(graph);
     const output = connectedComponents(graphInstance);
-    setResult({ title: "Bağlı Bileşenler (Connected Components)", data: output });
-  };
-
-  
- const runColoring = () => {
-    clearVisuals();
-    
-   
-    const output = welshPowell(graph); 
-    
-    
-    setNodeColors(output.coloring);
-
-    
-    setResult({ 
-      title: "Welsh-Powell Renklendirme Tablosu", 
-      data: output.detailedTables 
+    setResult({
+      title: "Bağlı Bileşenler (Connected Components)",
+      data: output,
     });
   };
-const runCentrality = () => {
-    
-    clearVisuals(); 
-    setNodeColors({}); 
 
-   
-    const nodesWithDegree = graph.nodes.map(node => {
-      
-      const degree = graph.links.filter(l => 
-        (l.source.id ?? l.source) === node.id || 
-        (l.target.id ?? l.target) === node.id
+  const runColoring = () => {
+    clearVisuals();
+    const output = welshPowell(graph);
+    setNodeColors(output.coloring);
+    setResult({
+      title: "Welsh-Powell Renklendirme Tablosu",
+      data: output.detailedTables,
+    });
+  };
+
+  const runCentrality = () => {
+    clearVisuals();
+    setNodeColors({});
+
+    const nodesWithDegree = graph.nodes.map((node) => {
+      const degree = graph.links.filter(
+        (l) =>
+          (l.source.id ?? l.source) === node.id ||
+          (l.target.id ?? l.target) === node.id
       ).length;
       return { ...node, degree };
     });
 
-    
     nodesWithDegree.sort((a, b) => b.degree - a.degree);
 
-    
-    const top5 = nodesWithDegree.slice(0, 5).map(n => ({
-      "Sıra": "#", // Geçici
+    const top5 = nodesWithDegree.slice(0, 5).map((n) => ({
+      Sıra: "#",
       "Kullanıcı ID": n.id,
       "Derece (Bağlantı)": n.degree,
-      "Etkileşim Puanı": n.etkileşim
+      "Etkileşim Puanı": n.etkileşim,
     }));
 
-    
-    const formattedTop5 = top5.map((item, index) => ({ ...item, "Sıra": index + 1 }));
+    const formattedTop5 = top5.map((item, index) => ({
+      ...item,
+      Sıra: index + 1,
+    }));
 
-    
-    setResult({ 
-      title: "En Etkili 5 Düğüm (Degree Centrality)", 
-      data: formattedTop5 
+    setResult({
+      title: "En Etkili 5 Düğüm (Degree Centrality)",
+      data: formattedTop5,
     });
-    
-    
-    const top5Ids = formattedTop5.map(item => item["Kullanıcı ID"]);
-    setHighlightNodes(top5Ids); 
+
+    const top5Ids = formattedTop5.map((item) => item["Kullanıcı ID"]);
+    setHighlightNodes(top5Ids);
   };
-  
+
+  // --- NODE EKLEME / SİLME ---
 
   const addNode = () => {
     pushHistory(graph);
-    const newId = graph.nodes.length > 0 ? Math.max(...graph.nodes.map((n) => typeof n.id === 'number' ? n.id : 0)) + 1 : 1;
+    const newId =
+      graph.nodes.length > 0
+        ? Math.max(
+            ...graph.nodes.map((n) => (typeof n.id === "number" ? n.id : 0))
+          ) + 1
+        : 1;
     const newNode = {
       id: newId,
       aktiflik: parseFloat(Math.random().toFixed(2)),
       etkileşim: Math.floor(Math.random() * 20),
-      bagSayisi: 0, 
+      bagSayisi: 0,
     };
     setGraph({ ...graph, nodes: [...graph.nodes, newNode] });
   };
@@ -305,127 +308,108 @@ const runCentrality = () => {
     clearVisuals();
   };
 
-  const addLink = () => {
-    if (!selectedNode) return;
-    const others = graph.nodes.filter((n) => n.id !== selectedNode.id);
-    if (others.length === 0) return; 
-    const randomNode = others[Math.floor(Math.random() * others.length)];
+  // Pencereyi Açar
+  const handleOpenAddLink = () => {
+    if (!selectedNode) {
+      alert("Lütfen önce kaynak (başlangıç) düğümünü seçin!");
+      return;
+    }
+    setTargetNodeId(""); // Inputu temizle
+    setOpenLinkDialog(true);
+  };
 
-    const exists = graph.links.some(l => {
-        const s = l.source.id ?? l.source;
-        const t = l.target.id ?? l.target;
-        return (s === selectedNode.id && t === randomNode.id) || 
-               (s === randomNode.id && t === selectedNode.id);
+  // Pencereyi Kapatır
+  const handleCloseLinkDialog = () => {
+    setOpenLinkDialog(false);
+  };
+
+  // Bağlantıyı Kaydeder
+  const saveLink = () => {
+    if (!selectedNode) return;
+
+    const targetIdInt = parseInt(targetNodeId);
+
+    // Kontroller
+    if (isNaN(targetIdInt)) {
+      alert("Lütfen geçerli bir sayı girin.");
+      return;
+    }
+    if (targetIdInt === selectedNode.id) {
+      alert("Bir düğümü kendine bağlayamazsınız (Self-loop yasak).");
+      return;
+    }
+    const targetNodeExists = graph.nodes.find((n) => n.id === targetIdInt);
+    if (!targetNodeExists) {
+      alert(`ID: ${targetIdInt} olan bir kullanıcı bulunamadı!`);
+      return;
+    }
+
+    // Bağlantı var mı kontrolü
+    const exists = graph.links.some((l) => {
+      const s = typeof l.source === "object" ? l.source.id : l.source;
+      const t = typeof l.target === "object" ? l.target.id : l.target;
+      return (
+        (s === selectedNode.id && t === targetIdInt) ||
+        (s === targetIdInt && t === selectedNode.id)
+      );
     });
 
     if (exists) {
-        alert("Bu bağlantı zaten var!");
-        return;
+      alert("Bu bağlantı zaten mevcut!");
+      return;
     }
 
     pushHistory(graph);
+
+    // Yeni bağlantı oluştur
     const newLink = {
-      id: `link-${Date.now()}`,
       source: selectedNode.id,
-      target: randomNode.id,
-      weight: 1, 
+      target: targetIdInt,
+      weight: 1, // Dinamik ağırlık GraphModel'de hesaplanıyor ama veri yapısı için 1 veriyoruz
     };
+
     setGraph({ ...graph, links: [...graph.links, newLink] });
+    setOpenLinkDialog(false);
   };
 
-  
+  // JSON KAYDET
   const saveGraph = () => {
-    
-    const nodes = graph.nodes;
-    const links = graph.links;
-    
-    
-    const nodeIds = nodes.map(n => n.id);
-    
-    
-    const adjacencyList = {};
-    nodes.forEach(node => {
-      
-      const neighbors = links
-        .filter(l => {
-          const s = l.source.id ?? l.source;
-          const t = l.target.id ?? l.target;
-          return s === node.id || t === node.id;
-        })
-        .map(l => {
-          const s = l.source.id ?? l.source;
-          const t = l.target.id ?? l.target;
-        
-          return s === node.id ? t : s;
-        });
-      
-      adjacencyList[node.id] = neighbors;
-    });
-
-    
-    const size = nodes.length;
-    const matrix = Array(size).fill(null).map(() => Array(size).fill(0));
-
-    links.forEach(link => {
-      const s = link.source.id ?? link.source;
-      const t = link.target.id ?? link.target;
-      const w = link.weight ?? 1;
-
-      const sourceIndex = nodeIds.indexOf(s);
-      const targetIndex = nodeIds.indexOf(t);
-
-      if (sourceIndex !== -1 && targetIndex !== -1) {
-        matrix[sourceIndex][targetIndex] = w; 
-        matrix[targetIndex][sourceIndex] = w; 
-      }
-    });
-
-    
-    const exportData = {
-     
-      nodes: nodes.map(n => ({
-        id: n.id,
-        aktiflik: n.aktiflik,
-        etkileşim: n.etkileşim,
-        bagSayisi: n.bagSayisi,
-       
-        x: n.x,
-        y: n.y
-      })),
-      links: links.map(l => ({
-        source: l.source.id ?? l.source,
-        target: l.target.id ?? l.target,
-        weight: l.weight ?? 1,
-        id: l.id
-      })),
-      
-     
-      analiz: {
-        adjacencyList: adjacencyList,
-        adjacencyMatrix: matrix,
-        nodeOrder: nodeIds // Matrisin hangi sıraya göre olduğu
-      }
-    };
-
-    saveGraphFile(exportData);
+    saveGraphFile(graph);
   };
 
+  // JSON YÜKLE
   const loadGraph = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     loadGraphFile(file, (newGraph) => {
-        setGraph(newGraph);
-        setSelectedNode(null);
-        clearVisuals();
-        setResult(null);
-        // Geçmişi temizle yeni dosya yüklenince
-        setHistory([]);
-        setFuture([]);
+      setGraph(newGraph);
+      setSelectedNode(null);
+      clearVisuals();
+      setResult(null);
+      setHistory([]);
+      setFuture([]);
     });
-    e.target.value = ""; 
+    e.target.value = "";
   };
 
-  
+  const saveCSV = () => {
+    saveGraphToCSV(graph);
+  };
+
+  const loadCSV = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    loadGraphFromCSV(file, (newGraph) => {
+      setGraph(newGraph);
+      setSelectedNode(null);
+      clearVisuals();
+      setResult(null);
+      setHistory([]);
+      setFuture([]);
+    });
+    e.target.value = "";
+  };
+
   const zoomIn = () => fgRef.current?.zoom(fgRef.current.zoom() * 1.2, 400);
   const zoomOut = () => fgRef.current?.zoom(fgRef.current.zoom() / 1.2, 400);
   const zoomToFit = () => fgRef.current?.zoomToFit(400, 40);
@@ -444,8 +428,7 @@ const runCentrality = () => {
           bgcolor: "background.default",
         }}
       >
-        
-        
+        {/* GRAFİK GÖRÜNÜMÜ */}
         <Box
           sx={{
             position: "absolute",
@@ -459,17 +442,17 @@ const runCentrality = () => {
           <GraphView
             graph={graph}
             onNodeClick={(node) => {
-                setSelectedNode(node);
-                setSelectedEdge(null);
+              setSelectedNode(node);
+              setSelectedEdge(null);
             }}
             onLinkClick={(link) => {
-                setSelectedEdge(link);
-                setSelectedNode(null);
+              setSelectedEdge(link);
+              setSelectedNode(null);
             }}
             highlight={highlightNodes}
-            nodeColors={nodeColors} 
+            nodeColors={nodeColors}
             graphRef={fgRef}
-            renameNode={renameNode} // EKSİK PROP EKLENDİ
+            renameNode={renameNode}
             selectedEdge={selectedEdge}
           />
         </Box>
@@ -488,7 +471,11 @@ const runCentrality = () => {
             border: "1px solid rgba(0, 229, 255, 0.3)",
           }}
         >
-          <Typography variant="h6" color="primary" sx={{ fontWeight: 'bold', letterSpacing: 1 }}>
+          <Typography
+            variant="h6"
+            color="primary"
+            sx={{ fontWeight: "bold", letterSpacing: 1 }}
+          >
             SOSYAL AG ANALIZI
           </Typography>
         </Paper>
@@ -510,11 +497,17 @@ const runCentrality = () => {
         >
           {/* Seçili Düğüm Bilgisi */}
           <Fade in={!!selectedNode} unmountOnExit>
-            <Paper sx={{ p: 2, pointerEvents: "auto", borderLeft: "4px solid #d500f9" }}>
+            <Paper
+              sx={{
+                p: 2,
+                pointerEvents: "auto",
+                borderLeft: "4px solid #d500f9",
+              }}
+            >
               <Typography variant="subtitle2" color="secondary" gutterBottom>
                 SEÇİLİ DÜĞÜM
               </Typography>
-              <NodeInfo node={selectedNode} />
+              <NodeInfo node={selectedNode} links={graph.links} />
             </Paper>
           </Fade>
 
@@ -530,9 +523,11 @@ const runCentrality = () => {
             }}
           >
             <Box sx={{ p: 2, borderBottom: "1px solid rgba(255,255,255,0.1)" }}>
-               <Typography variant="subtitle1" fontWeight="bold">Kontrol Paneli</Typography>
+              <Typography variant="subtitle1" fontWeight="bold">
+                Kontrol Paneli
+              </Typography>
             </Box>
-            
+
             <Box sx={{ p: 2, overflowY: "auto", flex: 1 }}>
               <Controls
                 runBfs={runBfs}
@@ -544,9 +539,11 @@ const runCentrality = () => {
                 runCentrality={runCentrality}
                 addNode={addNode}
                 deleteNode={deleteNode}
-                addLink={addLink}
+                addLink={handleOpenAddLink}
                 saveGraph={saveGraph}
                 loadGraph={loadGraph}
+                saveCSV={saveCSV}
+                loadCSV={loadCSV} 
                 zoomIn={zoomIn}
                 zoomOut={zoomOut}
                 zoomToFit={zoomToFit}
@@ -554,46 +551,62 @@ const runCentrality = () => {
                 undo={undo}
                 redo={redo}
                 exportPNG={exportPNG}
-                setSpeed={(e) => setSpeed(Number(e.target.value))}
               />
             </Box>
           </Paper>
 
-          
+          {/* Terminal Çıktısı */}
           <Paper
             sx={{
               height: "200px",
               display: "flex",
               flexDirection: "column",
-              bgcolor: "#000000 !important", 
+              bgcolor: "#000000 !important",
               border: "1px solid #333",
               pointerEvents: "auto",
             }}
           >
-            <Box sx={{ 
-                px: 2, py: 1, 
-                bgcolor: "#1a1a1a", 
+            <Box
+              sx={{
+                px: 2,
+                py: 1,
+                bgcolor: "#1a1a1a",
                 borderBottom: "1px solid #333",
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center'
-              }}>
-              <Typography variant="caption" sx={{ fontFamily: "monospace", color: "#aaa" }}>
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{ fontFamily: "monospace", color: "#aaa" }}
+              >
                 TERMINAL ÇIKTISI
               </Typography>
-              <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: result ? '#00e676' : '#555' }} />
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  bgcolor: result ? "#00e676" : "#555",
+                }}
+              />
             </Box>
-            
-            <Box sx={{ 
-                p: 2, 
-                overflow: "auto", 
-                flex: 1, 
+
+            <Box
+              sx={{
+                p: 2,
+                overflow: "auto",
+                flex: 1,
                 fontFamily: "'Fira Code', 'Consolas', monospace",
-                fontSize: "0.85rem"
-              }}>
+                fontSize: "0.85rem",
+              }}
+            >
               {result ? (
                 <>
-                  <Typography sx={{ color: "#00e5ff", mb: 1, fontWeight: 'bold' }}>
+                  <Typography
+                    sx={{ color: "#00e5ff", mb: 1, fontWeight: "bold" }}
+                  >
                     {">"} {result.title}
                   </Typography>
                   <Box component="pre" sx={{ m: 0, color: "#a5d6a7" }}>
@@ -609,6 +622,48 @@ const runCentrality = () => {
           </Paper>
         </Box>
 
+        {/* --- BAĞLANTI EKLEME PENCERESİ --- */}
+        <Dialog open={openLinkDialog} onClose={handleCloseLinkDialog}>
+          <DialogTitle sx={{ bgcolor: "#1a1a1a", color: "#00e5ff" }}>
+            Bağlantı Oluştur
+          </DialogTitle>
+          <DialogContent sx={{ bgcolor: "#1a1a1a", pt: 2 }}>
+            <Box
+              sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 2 }}
+            >
+              <Typography variant="body2" sx={{ color: "#aaa" }}>
+                Seçili Düğüm (Kaynak): <strong>ID {selectedNode?.id}</strong>
+              </Typography>
+
+              <Typography variant="body2" sx={{ color: "#aaa" }}>
+                Hangi ID'li kullanıcı ile bağlamak istiyorsunuz?
+              </Typography>
+
+              <TextField
+                label="Hedef Kullanıcı ID"
+                type="number"
+                variant="outlined"
+                fullWidth
+                autoFocus
+                value={targetNodeId}
+                onChange={(e) => setTargetNodeId(e.target.value)}
+                sx={{
+                  input: { color: "white" },
+                  label: { color: "#9e9e9e" },
+                  fieldset: { borderColor: "#333" },
+                }}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ bgcolor: "#1a1a1a", pb: 2, px: 3 }}>
+            <Button onClick={handleCloseLinkDialog} color="error">
+              İptal
+            </Button>
+            <Button onClick={saveLink} variant="contained" color="info">
+              Bağla
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </ThemeProvider>
   );
