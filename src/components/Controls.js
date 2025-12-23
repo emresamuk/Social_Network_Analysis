@@ -27,6 +27,7 @@ export default function Controls({
   zoomIn,
   zoomOut,
   zoomToFit,
+  generateRandomGraph,
   centerGraph
 }) {
   return (
@@ -46,6 +47,35 @@ export default function Controls({
             <Grid item xs={6}><Button fullWidth variant="contained" onClick={runColoring}>Renkleme</Button></Grid>
             <Grid item xs={6}> <Button fullWidth variant="contained" onClick={runCentrality}> En Etkili Düğümler</Button></Grid>
           </Grid>
+        </AccordionDetails>
+      </Accordion>
+    <Accordion>
+        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#e91e63' }}>
+            🧪 Test Verisi Oluştur
+          </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
+          <Stack spacing={1}>
+            
+            <Grid container spacing={1}>
+              <Grid item xs={4}>
+                <Button fullWidth variant="contained" color="success" size="small" onClick={() => generateRandomGraph(15)}>
+                  Küçük (15)
+                </Button>
+              </Grid>
+              <Grid item xs={4}>
+                <Button fullWidth variant="contained" color="warning" size="small" onClick={() => generateRandomGraph(75)}>
+                  Orta (75)
+                </Button>
+              </Grid>
+              <Grid item xs={4}>
+                <Button fullWidth variant="contained" color="error" size="small" onClick={() => generateRandomGraph(100)}>
+                  Büyük (100)
+                </Button>
+              </Grid>
+            </Grid>
+          </Stack>
         </AccordionDetails>
       </Accordion>
 
@@ -109,3 +139,4 @@ export default function Controls({
     </Stack>
   );
 }
+

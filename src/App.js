@@ -175,30 +175,57 @@ export default function App() {
 
   // --- ALGORITMALAR ---
 
-  const runBfs = () => {
+ const runBfs = () => {
     if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
     clearVisuals();
+
+    const startTime = performance.now(); // ⏱️ SAYAÇ BAŞLA
     const graphInstance = Graph.fromJSON(graph);
     const order = bfs(graphInstance, selectedNode.id);
-    setResult({ title: "BFS (Breadth-First Search)", data: order });
+    const endTime = performance.now();   // ⏱️ SAYAÇ BİTİR
+    
+    const duration = (endTime - startTime).toFixed(4);
+
+    setResult({ 
+        title: `BFS (Süre: ${duration} ms)`, 
+        data: order 
+    });
     setHighlightNodes(order);
   };
 
   const runDfs = () => {
     if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
     clearVisuals();
+
+    const startTime = performance.now(); // ⏱️ BAŞLA
     const graphInstance = Graph.fromJSON(graph);
     const order = dfs(graphInstance, selectedNode.id);
-    setResult({ title: "DFS (Depth-First Search)", data: order });
+    const endTime = performance.now();   // ⏱️ BİTİR
+    
+    const duration = (endTime - startTime).toFixed(4);
+
+    setResult({ 
+        title: `DFS (Süre: ${duration} ms)`, 
+        data: order 
+    });
     setHighlightNodes(order);
   };
 
   const runDijkstra = () => {
     if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
     clearVisuals();
+
+    const startTime = performance.now(); // ⏱️ BAŞLA
     const graphInstance = Graph.fromJSON(graph);
     const dist = dijkstra(graphInstance, selectedNode.id);
-    setResult({ title: "Dijkstra (En Kısa Yol)", data: dist });
+    const endTime = performance.now();   // ⏱️ BİTİR
+
+    const duration = (endTime - startTime).toFixed(4);
+
+    setResult({ 
+        title: `Dijkstra (Süre: ${duration} ms)`, 
+        data: dist 
+    });
     setHighlightNodes(Object.keys(dist).map(Number));
   };
 
@@ -206,14 +233,19 @@ export default function App() {
     if (!selectedNode) return alert("Lütfen başlangıç için bir düğüm seçin!");
     const others = graph.nodes.filter((n) => n.id !== selectedNode.id);
     if (others.length === 0) return alert("Grafikte başka düğüm yok!");
-    const targetNode = others[others.length - 1];
+    const targetNode = others[others.length - 1]; // Son düğümü hedef seçiyor
 
     clearVisuals();
+
+    const startTime = performance.now(); // ⏱️ BAŞLA
     const graphInstance = Graph.fromJSON(graph);
     const path = astar(graphInstance, selectedNode.id, targetNode.id);
+    const endTime = performance.now();   // ⏱️ BİTİR
+
+    const duration = (endTime - startTime).toFixed(4);
 
     setResult({
-      title: `A* Algoritması (${selectedNode.id} -> ${targetNode.id})`,
+      title: `A* Algoritması (${selectedNode.id} -> ${targetNode.id}) - Süre: ${duration} ms`,
       data: path || "Yol bulunamadı",
     });
     setHighlightNodes(path || []);
@@ -221,20 +253,32 @@ export default function App() {
 
   const runConnected = () => {
     clearVisuals();
+
+    const startTime = performance.now(); // ⏱️ BAŞLA
     const graphInstance = Graph.fromJSON(graph);
     const output = connectedComponents(graphInstance);
+    const endTime = performance.now();   // ⏱️ BİTİR
+
+    const duration = (endTime - startTime).toFixed(4);
+
     setResult({
-      title: "Bağlı Bileşenler (Connected Components)",
+      title: `Bağlı Bileşenler (Süre: ${duration} ms)`,
       data: output,
     });
   };
 
   const runColoring = () => {
     clearVisuals();
+
+    const startTime = performance.now(); // ⏱️ BAŞLA
     const output = welshPowell(graph);
+    const endTime = performance.now();   // ⏱️ BİTİR
+
+    const duration = (endTime - startTime).toFixed(4);
+
     setNodeColors(output.coloring);
     setResult({
-      title: "Welsh-Powell Renklendirme Tablosu",
+      title: `Welsh-Powell Renklendirme (Süre: ${duration} ms)`,
       data: output.detailedTables,
     });
   };
@@ -242,6 +286,8 @@ export default function App() {
   const runCentrality = () => {
     clearVisuals();
     setNodeColors({});
+
+    const startTime = performance.now(); // ⏱️ BAŞLA
 
     const nodesWithDegree = graph.nodes.map((node) => {
       const degree = graph.links.filter(
@@ -255,7 +301,7 @@ export default function App() {
     nodesWithDegree.sort((a, b) => b.degree - a.degree);
 
     const top5 = nodesWithDegree.slice(0, 5).map((n) => ({
-      Sıra: "#",
+      "Sıra": "#",
       "Kullanıcı ID": n.id,
       "Derece (Bağlantı)": n.degree,
       "Etkileşim Puanı": n.etkileşim,
@@ -263,18 +309,76 @@ export default function App() {
 
     const formattedTop5 = top5.map((item, index) => ({
       ...item,
-      Sıra: index + 1,
+      "Sıra": index + 1,
     }));
+    
+    const endTime = performance.now(); // ⏱️ BİTİR
+    const duration = (endTime - startTime).toFixed(4);
 
     setResult({
-      title: "En Etkili 5 Düğüm (Degree Centrality)",
+      title: `En Etkili 5 Düğüm (Süre: ${duration} ms)`,
       data: formattedTop5,
     });
 
     const top5Ids = formattedTop5.map((item) => item["Kullanıcı ID"]);
     setHighlightNodes(top5Ids);
   };
+// --- TEST VERİSİ OLUŞTURUCU ---
+  const generateRandomGraph = (nodeCount) => {
+    pushHistory(graph);
 
+    const newNodes = [];
+    const newLinks = [];
+    
+    // 1. Düğümleri Oluştur
+    for (let i = 1; i <= nodeCount; i++) {
+      newNodes.push({
+        id: i,
+        aktiflik: parseFloat(Math.random().toFixed(2)),
+        etkileşim: Math.floor(Math.random() * 100),
+        bagSayisi: 0,
+        x: Math.random() * 400 - 200, 
+        y: Math.random() * 400 - 200  
+      });
+    }
+
+    // 2. Rastgele Bağlantılar Oluştur
+    newNodes.forEach(source => {
+      // Her düğümün en az 1, en fazla 3 bağı olsun
+      const linkCount = Math.floor(Math.random() * 3) + 1; 
+      
+      for (let j = 0; j < linkCount; j++) {
+        const target = newNodes[Math.floor(Math.random() * nodeCount)];
+        
+        // Kendine bağlamayı engelle
+        if (source.id === target.id) continue;
+        
+        // Bağ kontrolü
+        const exists = newLinks.some(l => 
+          (l.source === source.id && l.target === target.id) ||
+          (l.source === target.id && l.target === source.id)
+        );
+
+        if (!exists) {
+          newLinks.push({ 
+            source: source.id, 
+            target: target.id, 
+            weight: 1 
+          });
+        }
+      }
+    });
+
+    // 3. Grafiği Güncelle
+    setGraph({ nodes: newNodes, links: newLinks });
+    
+    
+
+    setResult({ 
+      title: "Test Verisi Oluşturuldu", 
+      data: [{ "Düğüm Sayısı": nodeCount, "Bağ Sayısı": newLinks.length }] 
+    });
+  };
   // --- NODE EKLEME / SİLME ---
 
   const addNode = () => {
@@ -551,6 +655,7 @@ export default function App() {
                 undo={undo}
                 redo={redo}
                 exportPNG={exportPNG}
+                generateRandomGraph={generateRandomGraph}
               />
             </Box>
           </Paper>
