@@ -30,12 +30,14 @@ Bu bölümde, sosyal ağ grafı üzerinde gerçekleştirilen algoritmaların ça
 BFS algoritması, verilen bir başlangıç düğümünden itibaren grafı katman katman dolaşarak erişilebilen tüm düğümleri bulur. Algoritma, kuyruk (queue) veri yapısını kullanır ve önce en yakın komşuları ziyaret eder.
 
 **Kullanım Amacı:**
+
 Bir kullanıcıdan erişilebilen tüm kullanıcıların tespit edilmesi.
 
 **Zaman Karmaşıklığı:**  
 O(V + E)
 
 **Alan Karmaşıklığı:**
+
 O(V)
 
 **Akış Diyagramı:**
@@ -108,7 +110,7 @@ flowchart TD
 ```
 ---
 
-### 3.4 A* (A-Star) En Kısa Yol Algoritması
+### 3.4 A* En Kısa Yol Algoritması
 
 **Çalışma Mantığı:**  
 A* algoritması, Dijkstra algoritmasını sezgisel (heuristic) bir fonksiyon ile geliştirerek daha verimli bir en kısa yol araması yapar. Algoritma, her düğüm için gerçek maliyet (g) ve hedefe olan tahmini maliyetin (h) toplamını ifade eden f = g + h değerini kullanır.
@@ -175,11 +177,11 @@ Uygulama mimarisi aşağıdaki dört ana katmandan oluşmaktadır:
 - **Kullanıcı Arayüzü Katmanı (UI / Presentation Layer)**
 - **Veri Saklama Katmanı (Persistence Layer)**
 
-`App.js` dosyası, bu katmanlar arasında koordinasyonu sağlayan ana kontrol bileşeni (controller) olarak görev yapmaktadır.
+`App.js` dosyası, bu katmanlar arasında koordinasyonu sağlayan ana kontrol bileşeni olarak görev yapmaktadır.
 
 ---
 
-### 4.2 Veri Modeli (Graph Model Layer)
+### 4.2 Veri Modeli
 
 Veri modeli, sosyal ağı temsil eden temel sınıflardan oluşmaktadır. Bu katman, algoritmaların çalıştığı soyut graf yapısını tanımlar.
 
@@ -223,7 +225,7 @@ Bu sınıf, uygulamanın çekirdek bileşeni olup veri modeli ile algoritma katm
 
 ---
 
-### 4.3 Algoritma Katmanı (Algorithm Layer)
+### 4.3 Algoritma Katmanı
 
 Graf üzerinde gerçekleştirilen tüm algoritmalar, ayrı modüller halinde tasarlanmıştır. Her algoritma, Graph nesnesini parametre olarak alır ve kullanıcı arayüzünden bağımsız şekilde çalışır.
 
@@ -239,7 +241,7 @@ Bu modüler yapı, algoritmaların kolayca değiştirilmesine ve yeni algoritmal
 
 ---
 
-### 4.4 Kullanıcı Arayüzü Katmanı (UI Layer)
+### 4.4 Kullanıcı Arayüzü Katmanı
 
 Kullanıcı arayüzü, React bileşenleri kullanılarak geliştirilmiştir.
 
@@ -406,8 +408,8 @@ Uygulama, farklı ölçeklerde oluşturulan graflar üzerinde çeşitli grafik a
 Geliştirilen uygulama; grafik oluşturma, düğüm ve kenar ekleme, algoritma seçimi ve sonuçların görselleştirilmesi gibi temel işlevleri içermektedir. 
 Kullanıcılar, JSON formatında veri yükleyerek veya manuel giriş yaparak grafik oluşturabilmekte ve seçilen algoritmanın çalışma sürecini görsel olarak izleyebilmektedir.
 
-**Şekil 5.1.** Uygulama ana ekranı ve grafik görselleştirme arayüzü  
-![](https://i.imgur.com/ORNEK1.png)
+**Şekil 5.1.1.** Uygulama ana ekranı ve grafik görselleştirme arayüzü  
+![](https://i.imgur.com/y24rl3M.png)
 
 ---
 
