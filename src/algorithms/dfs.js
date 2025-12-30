@@ -14,5 +14,5 @@ export function dfs(graph, startId, visited = new Set(), result = []) {
     }
   });
 
-  return result; // Ziyaret sırası
+  return result;
 }

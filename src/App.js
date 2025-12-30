@@ -99,6 +99,9 @@ export default function App() {
       { source: 1, target: 3, weight: 1 },
     ],
   });
+  const [openRemoveLinkDialog, setOpenRemoveLinkDialog] = useState(false);
+  const [removeSourceId, setRemoveSourceId] = useState("");
+  const [removeTargetId, setRemoveTargetId] = useState("");
 
   const [selectedNode, setSelectedNode] = useState(null);
   const [selectedEdge, setSelectedEdge] = useState(null);
@@ -379,6 +382,72 @@ export default function App() {
       data: [{ "Düğüm Sayısı": nodeCount, "Bağ Sayısı": newLinks.length }] 
     });
   };
+
+
+  // --- BAĞ SİLME İŞLEMLERİ ---
+
+  // Pencereyi Açar
+  const handleOpenRemoveLink = () => {
+    // Eğer sahnede bir bağ seçiliyse (tıklanmışsa), ID'leri otomatik doldur
+    if (selectedEdge) {
+      const s = selectedEdge.source.id ?? selectedEdge.source;
+      const t = selectedEdge.target.id ?? selectedEdge.target;
+      setRemoveSourceId(s);
+      setRemoveTargetId(t);
+    } else {
+      setRemoveSourceId("");
+      setRemoveTargetId("");
+    }
+    setOpenRemoveLinkDialog(true);
+  };
+
+  const handleCloseRemoveLinkDialog = () => {
+    setOpenRemoveLinkDialog(false);
+  };
+
+  const removeLink = () => {
+    const sId = parseInt(removeSourceId);
+    const tId = parseInt(removeTargetId);
+
+    if (isNaN(sId) || isNaN(tId)) {
+      alert("Lütfen geçerli sayısal ID'ler girin.");
+      return;
+    }
+
+    // Yedek al (Undo işlemi için)
+    pushHistory(graph);
+
+    let found = false;
+    // Linkleri filtrele
+    const newLinks = graph.links.filter((l) => {
+      const sourceId = l.source.id ?? l.source;
+      const targetId = l.target.id ?? l.target;
+
+      // İki yönlü kontrol (1-2 veya 2-1)
+      const isMatch =
+        (sourceId === sId && targetId === tId) ||
+        (sourceId === tId && targetId === sId);
+
+      if (isMatch) found = true;
+      return !isMatch; // Eşleşmeyenleri tut, eşleşeni listeden at
+    });
+
+    if (!found) {
+      alert("Bu iki ID arasında silinecek bir bağ bulunamadı!");
+      // History'yi geri al (boşuna kayıt oluşmasın)
+      setHistory((h) => h.slice(0, -1));
+      return;
+    }
+
+    setGraph({ ...graph, links: newLinks });
+    setOpenRemoveLinkDialog(false);
+    setSelectedEdge(null); // Seçili bağ varsa seçimini kaldır
+    setResult({
+        title: "Bağlantı Silindi",
+        data: `ID ${sId} ve ID ${tId} arasındaki bağ kaldırıldı.`
+    });
+  };
+
   // --- NODE EKLEME / SİLME ---
 
   const addNode = () => {
@@ -644,6 +713,7 @@ export default function App() {
                 addNode={addNode}
                 deleteNode={deleteNode}
                 addLink={handleOpenAddLink}
+                removeLink={handleOpenRemoveLink}
                 saveGraph={saveGraph}
                 loadGraph={loadGraph}
                 saveCSV={saveCSV}
@@ -726,6 +796,61 @@ export default function App() {
             </Box>
           </Paper>
         </Box>
+
+            {/* Bağ Silme Pencere */}
+        <Dialog open={openRemoveLinkDialog} onClose={handleCloseRemoveLinkDialog}>
+          <DialogTitle sx={{ bgcolor: "#1a1a1a", color: "#00e5ff" }}>
+            Bağlantı Sil
+          </DialogTitle>
+          <DialogContent sx={{ bgcolor: "#1a1a1a", pt: 2 }}>
+            <Box sx={{ mt: 1, display: "flex", flexDirection: "column", gap: 2 }}>
+              <Typography variant="body2" sx={{ color: "#aaa" }}>
+                Arasındaki bağı kaldırmak istediğiniz iki düğümün ID'lerini girin.
+              </Typography>
+
+              <TextField
+                label="1. Düğüm ID"
+                type="number"
+                variant="outlined"
+                fullWidth
+                value={removeSourceId}
+                onChange={(e) => setRemoveSourceId(e.target.value)}
+                sx={{
+                  input: { color: "white" },
+                  label: { color: "#9e9e9e" },
+                  fieldset: { borderColor: "#333" },
+                }}
+              />
+
+              <TextField
+                label="2. Düğüm ID"
+                type="number"
+                variant="outlined"
+                fullWidth
+                value={removeTargetId}
+                onChange={(e) => setRemoveTargetId(e.target.value)}
+                sx={{
+                  input: { color: "white" },
+                  label: { color: "#9e9e9e" },
+                  fieldset: { borderColor: "#333" },
+                }}
+              />
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ bgcolor: "#1a1a1a", pb: 2, px: 3 }}>
+            <Button onClick={handleCloseRemoveLinkDialog} sx={{ color: "#aaa" }}>
+              İptal
+            </Button>
+            <Button 
+              onClick={removeLink} 
+              variant="contained" 
+              color="error" 
+              sx={{ fontWeight: "bold" }}
+            >
+              Bağı Sil
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* --- BAĞLANTI EKLEME PENCERESİ --- */}
         <Dialog open={openLinkDialog} onClose={handleCloseLinkDialog}>

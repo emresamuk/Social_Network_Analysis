@@ -20,6 +20,7 @@ export default function Controls({
   addNode,
   deleteNode,
   addLink,
+  removeLink,
   saveGraph,
   loadGraph,
   saveCSV, 
@@ -51,26 +52,26 @@ export default function Controls({
       </Accordion>
     <Accordion>
         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#e91e63' }}>
-            🧪 Test Verisi Oluştur
+          <Typography variant="subtitle2" sx={{ fontWeight: 'bold', color: '#d3d3d3ff' }}>
+           Test Verisi Oluşturma
           </Typography>
         </AccordionSummary>
         <AccordionDetails>
           <Stack spacing={1}>
             
             <Grid container spacing={1}>
-              <Grid item xs={4}>
-                <Button fullWidth variant="contained" color="success" size="small" onClick={() => generateRandomGraph(15)}>
+              <Grid item xs={6}>
+                <Button fullWidth variant="outlined"  size="small" onClick={() => generateRandomGraph(15)}>
                   Küçük (15)
                 </Button>
               </Grid>
-              <Grid item xs={4}>
-                <Button fullWidth variant="contained" color="warning" size="small" onClick={() => generateRandomGraph(75)}>
+              <Grid item xs={6}>
+                <Button fullWidth variant="outlined"  size="small" onClick={() => generateRandomGraph(75)}>
                   Orta (75)
                 </Button>
               </Grid>
-              <Grid item xs={4}>
-                <Button fullWidth variant="contained" color="error" size="small" onClick={() => generateRandomGraph(100)}>
+              <Grid item xs={6}>
+                <Button fullWidth variant="outlined"  size="small" onClick={() => generateRandomGraph(100)}>
                   Büyük (100)
                 </Button>
               </Grid>
@@ -104,6 +105,7 @@ export default function Controls({
             <Grid item xs={6}><Button fullWidth variant="outlined" onClick={addNode}>Düğüm Ekle</Button></Grid>
             <Grid item xs={6}><Button fullWidth variant="outlined" color="error" onClick={deleteNode}>Düğüm Sil</Button></Grid>
             <Grid item xs={12}><Button fullWidth variant="outlined" onClick={addLink}>Bağ Ekle</Button></Grid>
+            <Grid item xs={12}><Button fullWidth variant="outlined" color="error" onClick={removeLink}>Bağ Sil</Button></Grid>
           </Grid>
         </AccordionDetails>
       </Accordion>

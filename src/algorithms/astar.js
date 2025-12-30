@@ -41,7 +41,7 @@ export function astar(graph, startId, goalId) {
 
     neighbors.forEach((neighborObj) => {
       const neighborId = neighborObj.node.id;
-      // İster 4.3: Dinamik hesaplanmış ağırlığı
+      //  Dinamik hesaplanmış ağırlık
       const weight = neighborObj.weight; 
       
       const tentativeG = gScore[current] + weight;

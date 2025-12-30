@@ -1,4 +1,4 @@
-// Başlangıç düğümünden BFS sırasını döner: [1, 2, 3, ...]
+// Başlangıç düğümünden BFS sırasını döner
 
 export function bfs(graph, startId) {
   const queue = [startId];
@@ -23,5 +23,5 @@ export function bfs(graph, startId) {
     });
   }
 
-  return result; // Ziyaret sırasına göre düğüm ID'leri
+  return result;
 }
